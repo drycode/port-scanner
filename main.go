@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	_ "github.com/drypycode/port-scanner/portscanner"
 )
 
 type progressBar struct {
@@ -81,6 +83,7 @@ func percentageHelper(pb *progressBar, n float64) {
 func main() {
 	// dial tcp 127.0.0.1:8000: socket: too many open files
 	// This ^ error is occurring when trying to check a larger range of ports
+	Hello()
 	portRange := [2]int{0, 9000}
 	pb := progressBar{portRange, 0, 0, ""}
 	// ulimit := getUlimit()

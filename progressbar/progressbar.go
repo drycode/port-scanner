@@ -11,6 +11,7 @@ type ProgressBar struct {
 	Current       int
 	Percentage    float64
 	LastDisplayed string
+	
 }
 
 func (p *ProgressBar) setPercentage(i int) {
@@ -24,9 +25,11 @@ func (p *ProgressBar) setPercentage(i int) {
 func PercentageHelper(pb *ProgressBar, n int) {
 	pb.setPercentage(n)
 	
-	if strconv.FormatInt(int64((*pb).Percentage*100), 10) != (*pb).LastDisplayed {
+	currentPercentage := strconv.FormatInt(int64((*pb).Percentage*100), 10)
+	if currentPercentage != (*pb).LastDisplayed {
 		(*pb).LastDisplayed = strconv.FormatInt(int64((*pb).Percentage*100), 10)
-		fmt.Println((*pb).LastDisplayed + "%")
+		fmt.Print("#")
+		// fmt.Print("\r" + (*pb).LastDisplayed + "%")
 	}
 
 }

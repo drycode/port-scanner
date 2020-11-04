@@ -18,7 +18,6 @@ type scannerConfig struct {
 
 
 
-
 // Gives go time to close up some of the open connections
 func batchCalls(r [2]int, pb *progressBar, ops *[]string) {
 	c := make(chan string)
@@ -58,11 +57,12 @@ func batchCalls(r [2]int, pb *progressBar, ops *[]string) {
 }
 
 
+
 func main() {
 	// dial tcp 127.0.0.1:8000: socket: too many open files
 	// This ^ error is occurring when trying to check a larger range of ports
 	log.Info("Scanning ports...")
-	portRange := [2]int{0, 30000}
+	portRange := [2]int{0, 7000}
 	config := scannerConfig{
 		portRange, 
 		// 200,
@@ -74,6 +74,8 @@ func main() {
 		Percentage: 0, 
 		LastDisplayed: "",
 	}
+	ap := ArgParser{}
+	ap.parseArgs()
 	openPorts := make([]string, 2)
 	
 	for batchStart := config.portRange[0]; batchStart < config.portRange[1]; batchStart += config.ulimit {

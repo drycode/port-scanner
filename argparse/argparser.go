@@ -24,7 +24,7 @@ func getArgs() [2]int {
 }
 
 func parsePorts(ps string) [2]int {
-	validatePorts(ps)
+	// validatePorts(ps)
 	portsSliceString := strings.Split(ps, "-")
 	start, _ := strconv.Atoi(portsSliceString[0]) 
 	end, _ := strconv.Atoi(portsSliceString[1])

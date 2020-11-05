@@ -30,7 +30,7 @@ func PercentageHelper(pb *ProgressBar, n int) {
 		(*pb).LastDisplayed = strconv.FormatInt(int64((*pb).Percentage*100), 10)
 		// fmt.Print("#")
 		(*pb).Output[103] = "  " + (*pb).LastDisplayed + "%"
-		(*pb).Output[int((*pb).Percentage * 100 + 1)] = "#"	
+		(*pb).Output[int((*pb).Percentage * float64(100)) + 1] = "#"	
 		printable:=(*pb).Output[:]
 		fmt.Print("\r" + strings.Join(printable, ""))
 	}

@@ -74,6 +74,14 @@ func main() {
 		LastDisplayed: "",
 	}
 	
+	i:=1
+	bar.Output = [104]string{0: "[", 102: "]"}
+	for i < 102 {
+		bar.Output[i] = "-"
+		i ++
+	}
+	
+	
 	openPorts := make([]string, 2)
 	
 	for batchStart := config.portRange[0]; batchStart < config.portRange[1]; batchStart += config.ulimit {

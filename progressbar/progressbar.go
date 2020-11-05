@@ -16,7 +16,6 @@ type ProgressBar struct {
 func (p *ProgressBar) setPercentage(i int) {
 	
 	perc := float64(i) / float64((*p).TotalPorts)
-	// log.Info("Unrounded percentage: %v", perc)
 	(*p).Percentage = perc
 }
 

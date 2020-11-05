@@ -3,9 +3,10 @@ package main
 import (
 	"fmt"
 
+	ap "github.com/drypycode/port-scanner/argparse"
 	. "github.com/drypycode/port-scanner/portscanner"
 	"github.com/drypycode/port-scanner/progressbar"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 type progressBar = progressbar.ProgressBar
@@ -15,7 +16,6 @@ type scannerConfig struct {
 	portRange [2]int
 	ulimit int 
 }
-
 
 
 // Gives go time to close up some of the open connections
@@ -53,19 +53,18 @@ func batchCalls(r [2]int, pb *progressBar, ops *[]string) {
 
 	pingPorts(c)
 	logFromChannel(c)
-
+	close(c)
 }
 
-
+func init() {
+	logrus.SetLevel(logrus.DebugLevel)
+}
 
 func main() {
-	// dial tcp 127.0.0.1:8000: socket: too many open files
-	// This ^ error is occurring when trying to check a larger range of ports
-	log.Info("Scanning ports...")
-	portRange := [2]int{0, 7000}
+	logrus.Info("Scanning ports...")
+	portRange := ap.ParseArgs()
 	config := scannerConfig{
 		portRange, 
-		// 200,
 		GetUlimit(portRange[1] - portRange[0]),
 	}
 	bar := progressBar{
@@ -74,8 +73,7 @@ func main() {
 		Percentage: 0, 
 		LastDisplayed: "",
 	}
-	ap := ArgParser{}
-	ap.parseArgs()
+	
 	openPorts := make([]string, 2)
 	
 	for batchStart := config.portRange[0]; batchStart < config.portRange[1]; batchStart += config.ulimit {

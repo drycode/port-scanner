@@ -15,6 +15,25 @@ type ProgressBar struct {
 	Output			[104]string
 }
 
+// NewProgressBar ...
+func NewProgressBar(totalPorts int) ProgressBar {
+	i:=1
+	temp := [104]string{0: "[", 102: "]"}
+	for i < 102 {
+		temp[i] = "-"
+		i ++
+	}
+	pb := ProgressBar{
+		TotalPorts: totalPorts, 
+		Current: 0, 
+		Percentage: 0, 
+		LastDisplayed: "",
+		Output: temp,
+	}
+	
+	return pb
+}
+
 func (p *ProgressBar) setPercentage(i int) {
 	
 	perc := float64(i) / float64((*p).TotalPorts)

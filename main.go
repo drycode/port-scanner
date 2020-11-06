@@ -2,93 +2,60 @@ package main
 
 import (
 	"fmt"
+	"os/exec"
+	"strconv"
+	"strings"
 
 	ap "github.com/drypycode/port-scanner/argparse"
 	. "github.com/drypycode/port-scanner/portscanner"
-	"github.com/drypycode/port-scanner/progressbar"
+	pb "github.com/drypycode/port-scanner/progressbar"
 	"github.com/sirupsen/logrus"
 )
 
-type progressBar = progressbar.ProgressBar
-
-
-type scannerConfig struct {
-	portRange [2]int
-	ulimit int 
-}
-
-
-// Gives go time to close up some of the open connections
-func batchCalls(r [2]int, pb *progressBar, ops *[]string) {
-	c := make(chan string)
-	var start = r[0]
-	var end = r[1]
-	
-	
-	var logFromChannel = func (c chan string) {
-		scanned := 0
-		for l := range c {
-			scanned++
-			
-			go func(l string, openPorts *[]string) {
-				if l != "." {
-					// fmt.Println(l)
-					*openPorts = append(*openPorts, l)
-				}
-				
-			}(l, ops)
-			progressbar.PercentageHelper(pb, scanned-start)		
-			if scanned >= end - start {
-				return
-			}
-		}
-		
+// GetUlimit ...
+func getUlimit() int {
+	out, err := exec.Command("ulimit", "-n").Output()
+	if err != nil {
+		panic(err)
 	}
-	
-	var pingPorts = func(c chan string) {
-		for port := start; port < end; port++ {
-			go PingServerPort(port, c)
-		}
-	}
+	ulimit := strings.TrimSpace(string(out))
+	i, err := strconv.ParseInt(ulimit, 10, 64)
 
-	pingPorts(c)
-	logFromChannel(c)
-	close(c)
+	if err != nil {
+		panic(err)
+	}
+	return int(i)
 }
 
 func init() {
 	logrus.SetLevel(logrus.DebugLevel)
 }
 
-func main() {
-	logrus.Info("Scanning ports...")
-	cliArgs := ap.ParseArgs()
-	config := scannerConfig{
-		cliArgs.PortRange, 
-		GetUlimit(cliArgs.PortRange[1] - cliArgs.PortRange[0]),
-	}
-	bar := progressBar{
-		TotalPorts: config.portRange[1] - config.portRange[0], 
-		Current: 0, 
-		Percentage: 0, 
-		LastDisplayed: "",
-	}
-	
-	i:=1
-	bar.Output = [104]string{0: "[", 102: "]"}
-	for i < 102 {
-		bar.Output[i] = "-"
-		i ++
-	}
-	
-	
-	openPorts := make([]string, 2)
-	
-	for batchStart := config.portRange[0]; batchStart < config.portRange[1]; batchStart += config.ulimit {
-		batchCalls([2]int{batchStart, batchStart + config.ulimit}, &bar, &openPorts)
-	}
+func getBatchSize(totalPorts int) int{
+	batchSize := getUlimit()
+	portRangeSize := totalPorts
+	if batchSize > portRangeSize{
+		batchSize = portRangeSize
+	}		
+	return batchSize
+}
+
+func reportOpenPorts(openPorts []string) {
 	for port := range openPorts {
 		fmt.Println(openPorts[port])
 	}
+}
 
+func main() {
+	logrus.Info("Scanning ports...")
+	cliArgs := ap.ParseArgs()
+	totalPorts := cliArgs.PortRange[1] - cliArgs.PortRange[0] 
+	batchSize := getBatchSize(totalPorts)
+	bar := pb.NewProgressBar(totalPorts)
+	scanner := Scanner{Config:cliArgs, BatchSize: batchSize}
+	
+	openPorts := make([]string, 2)
+
+	scanner.Scan(&bar, &openPorts)
+	reportOpenPorts(openPorts)
 }

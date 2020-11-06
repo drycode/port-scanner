@@ -2,16 +2,36 @@ package portscanner
 
 import (
 	"net"
-	"os/exec"
 	"strconv"
 	"strings"
 	"time"
+
+	ap "github.com/drypycode/port-scanner/argparse"
+	"github.com/drypycode/port-scanner/progressbar"
+	. "github.com/drypycode/port-scanner/progressbar"
 )
 
+// Scanner ...
+type Scanner struct {
+	Config		ap.UnmarshalledCommandLineArgs
+	BatchSize	int
+}
+
+// Scan ...
+func (s *Scanner) Scan(bar *ProgressBar, openPorts *[]string) {
+	for batchStart := (*s).Config.PortRange[0]; batchStart < (*s).Config.PortRange[1]; batchStart += (*s).BatchSize {
+		s.BatchCalls(bar, openPorts)
+	}
+}
+
 // PingServerPort ...
-func PingServerPort(p int, c chan string) {
+func (s *Scanner) PingServerPort(p int, c chan string) {
 	port := strconv.FormatInt(int64(p), 10)
-	conn, err := net.DialTimeout("tcp", "127.0.0.1:"+port, 5000*time.Millisecond)
+	conn, err := net.DialTimeout(
+		strings.ToLower((*s).Config.Protocol), 
+		(*s).Config.Host + ":" + port, 
+		time.Duration(int64((*s).Config.Timeout)) * time.Millisecond,
+	)
 
 	if err == nil {
 		c <- "Port " + port + " is open"
@@ -22,20 +42,42 @@ func PingServerPort(p int, c chan string) {
 	return
 }
 
-// GetUlimit ...
-func GetUlimit(ports int) int {
-	out, err := exec.Command("ulimit", "-n").Output()
-	if err != nil {
-		panic(err)
-	}
-	s := strings.TrimSpace(string(out))
-	i, err := strconv.ParseInt(s, 10, 64)
 
-	if err != nil {
-		panic(err)
+
+// BatchCalls ...
+func (s *Scanner) BatchCalls(pb *ProgressBar, ops *[]string) {
+	c := make(chan string)
+	var start = (*s).Config.PortRange[0]
+	var end = (*s).Config.PortRange[1]
+	
+	
+	var logFromChannel = func (c chan string) {
+		scanned := 0
+		for l := range c {
+			scanned++
+			
+			go func(l string, openPorts *[]string) {
+				if l != "." {
+					// fmt.Println(l)
+					*openPorts = append(*openPorts, l)
+				}
+				
+			}(l, ops)
+			progressbar.PercentageHelper(pb, scanned-start)		
+			if scanned >= end - start {
+				return
+			}
+		}
+		
 	}
-	if int(i) > ports{
-		return ports
-	}		
-	return int(i)
+	
+	var pingPorts = func(c chan string) {
+		for port := start; port < end; port++ {
+			go s.PingServerPort(port, c)
+		}
+	}
+
+	pingPorts(c)
+	logFromChannel(c)
+	close(c)
 }

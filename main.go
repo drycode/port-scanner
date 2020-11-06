@@ -62,10 +62,10 @@ func init() {
 
 func main() {
 	logrus.Info("Scanning ports...")
-	portRange := ap.ParseArgs()
+	cliArgs := ap.ParseArgs()
 	config := scannerConfig{
-		portRange, 
-		GetUlimit(portRange[1] - portRange[0]),
+		cliArgs.PortRange, 
+		GetUlimit(cliArgs.PortRange[1] - cliArgs.PortRange[0]),
 	}
 	bar := progressBar{
 		TotalPorts: config.portRange[1] - config.portRange[0], 

@@ -11,26 +11,61 @@ import (
 )
 
 // ParseArgs ...
-func ParseArgs()(ports [2]int){
-	ports = getArgs()
-	logrus.Debug(ports)
-	return 
+func ParseArgs()(UnmarshalledCommandLineArgs){
+	cliArgs := getArgs()
+	logrus.Debug(cliArgs)
+	return cliArgs
 }
 
-func getArgs() [2]int {
-	portsStringPtr := flag.String("ports", "0-3000", "A port range, separated by '-'. Defaults: 0-65000")
+// UnmarshalledCommandLineArgs ...
+type UnmarshalledCommandLineArgs struct {
+	PortRange 		[2]int
+	Host 			string
+	Protocol 		string
+	Timeout			int
+	SpecifiedPorts	[]int
+
+}
+
+func getArgs() UnmarshalledCommandLineArgs {
+	portsStringPtr := flag.String("portrange", "0-3000", "A port range, delimited by '-'. 65535")
+	hostStringPtr := flag.String("host", "127.0.0.1", "Hostname or IP address, local or remote.")
+	protocolStringPtr := flag.String("protocol", "TCP", "Specify the protocol for the scanned ports.")
+	timeout := flag.Int("timeout", 5000, "Specify the timeout to wait on a port on the server.")
+	specifiedPortsPtr := flag.String("portlist", "", "A list of specific ports delimited by ','. Can be used w/ or w/o port range.")
+	
 	flag.Parse()
-	return parsePorts(*portsStringPtr)
+	portRange := parsePorts(*portsStringPtr)
+	specifiedPorts := parseSpecifiedPorts(*specifiedPortsPtr)
+	
+	cla := UnmarshalledCommandLineArgs{portRange, *hostStringPtr, *protocolStringPtr, *timeout, specifiedPorts}
+	return cla
 }
 
 func parsePorts(ps string) [2]int {
-	// validatePorts(ps)
 	portsSliceString := strings.Split(ps, "-")
 	start, _ := strconv.Atoi(portsSliceString[0]) 
 	end, _ := strconv.Atoi(portsSliceString[1])
 	
 	portsSlice := [2]int{start, end}
 	return portsSlice
+}
+
+func parseSpecifiedPorts(ps string) []int {
+	portsSliceString := strings.Split(ps, ",")
+	var specifiedPorts []int
+	if portsSliceString[0] != "" {
+		for i := range portsSliceString {
+			val, err := strconv.Atoi(portsSliceString[i])
+			if err != nil{
+				logrus.Fatal("Trouble decoding specified ports")
+			}
+			specifiedPorts = append(specifiedPorts,val )
+		}
+	}
+	
+	
+	return specifiedPorts
 }
 
 func validatePorts(p string) {

@@ -9,9 +9,8 @@ import (
 // ProgressBar ...
 type ProgressBar struct {
 	TotalPorts    	int
-	Current			int
-	Percentage    	float64
-	LastDisplayed 	string
+	Percentage    	int
+	LastDisplayed 	int
 	Output			[104]string
 }
 
@@ -25,33 +24,29 @@ func NewProgressBar(totalPorts int) ProgressBar {
 	}
 	pb := ProgressBar{
 		TotalPorts: totalPorts, 
-		Current: 0, 
 		Percentage: 0, 
-		LastDisplayed: "",
+		LastDisplayed: 0,
 		Output: temp,
 	}
 	
 	return pb
 }
 
-func (p *ProgressBar) setPercentage(i int) {
-	
-	perc := float64(i) / float64((*p).TotalPorts)
-	(*p).Percentage = perc
-}
+
 
 // PercentageHelper ...
-func PercentageHelper(pb *ProgressBar, n int) {
+func (pb *ProgressBar) PercentageHelper(n int) {
 	pb.setPercentage(n)
-	
-	currentPercentage := strconv.FormatInt(int64((*pb).Percentage*100), 10)
-	if currentPercentage != (*pb).LastDisplayed {
-		(*pb).LastDisplayed = strconv.FormatInt(int64((*pb).Percentage*100), 10)
-		// fmt.Print("#")
-		(*pb).Output[103] = "  " + (*pb).LastDisplayed + "%"
-		(*pb).Output[int((*pb).Percentage * float64(100)) + 1] = "#"	
+	if (*pb).Percentage != (*pb).LastDisplayed {
+		(*pb).LastDisplayed = (*pb).Percentage		
+		(*pb).Output[103] = "  " + strconv.Itoa((*pb).LastDisplayed) + "%"
+		(*pb).Output[(*pb).Percentage + 1] = "#"	
 		printable:=(*pb).Output[:]
 		fmt.Print("\r" + strings.Join(printable, ""))
 	}
+}
 
+func (pb *ProgressBar) setPercentage(i int) {	
+	perc := int(float64(i) / float64((*pb).TotalPorts) * 100)
+	(*pb).Percentage = perc
 }

@@ -4,28 +4,58 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	ap "github.com/drypycode/port-scanner/argparse"
-	"github.com/drypycode/port-scanner/progressbar"
 	. "github.com/drypycode/port-scanner/progressbar"
 )
+
+// SafeSlice ...
+type SafeSlice struct {
+	mu 			sync.Mutex
+	OpenPorts 	[]string
+}
+
+func (ss *SafeSlice) length() int {
+	ss.mu.Lock()
+	defer ss.mu.Unlock()
+	return len(ss.OpenPorts)
+}
+
+func (ss *SafeSlice) append(val string, wg *sync.WaitGroup) {
+	ss.mu.Lock()
+	ss.OpenPorts = append((*ss).OpenPorts, val)
+	ss.mu.Unlock()	
+	wg.Done()
+}
 
 // Scanner ...
 type Scanner struct {
 	Config		ap.UnmarshalledCommandLineArgs
 	BatchSize	int
+	Display		*ProgressBar
+	scanned 	int
 }
 
 // Scan ...
-func (s *Scanner) Scan(bar *ProgressBar, openPorts *[]string) {
+func (s *Scanner) Scan(openPorts *SafeSlice) {
+	(*s).scanned = 0
 	for batchStart := (*s).Config.PortRange[0]; batchStart < (*s).Config.PortRange[1]; batchStart += (*s).BatchSize {
-		s.BatchCalls(bar, openPorts)
+		start := batchStart
+		var end int
+		if (batchStart + (*s).BatchSize) < (*s).Config.PortRange[1] {
+			end = (batchStart + (*s).BatchSize)
+		} else {
+			end = (*s).Config.PortRange[1]
+		}
+		(*s).BatchCalls(start, end, openPorts)
 	}
 }
 
 // PingServerPort ...
 func (s *Scanner) PingServerPort(p int, c chan string) {
+	
 	port := strconv.FormatInt(int64(p), 10)
 	conn, err := net.DialTimeout(
 		strings.ToLower((*s).Config.Protocol), 
@@ -43,37 +73,38 @@ func (s *Scanner) PingServerPort(p int, c chan string) {
 }
 
 
-
 // BatchCalls ...
-func (s *Scanner) BatchCalls(pb *ProgressBar, ops *[]string) {
+func (s *Scanner) BatchCalls(start int, end int, ops *SafeSlice) {
 	c := make(chan string)
-	var start = (*s).Config.PortRange[0]
-	var end = (*s).Config.PortRange[1]
-	
-	
+	// var start = batchStart
+	// var end = (*s).Config.PortRange[1]
+	scannedInBatch := 0
 	var logFromChannel = func (c chan string) {
-		scanned := 0
+		wg := sync.WaitGroup{}
 		for l := range c {
-			scanned++
-			
-			go func(l string, openPorts *[]string) {
+			(*s).scanned++
+			(*s).Display.UpdatePercentage((*s).scanned)
+			scannedInBatch++
+			go func(l string, openPorts *SafeSlice) {
 				if l != "." {
 					// fmt.Println(l)
-					*openPorts = append(*openPorts, l)
+					wg.Add(1)
+					openPorts.append(l, &wg)
 				}
 				
 			}(l, ops)
-			progressbar.PercentageHelper(pb, scanned-start)		
-			if scanned >= end - start {
+					
+			if scannedInBatch >= end - start {
 				return
 			}
 		}
+		wg.Wait()
 		
 	}
 	
 	var pingPorts = func(c chan string) {
 		for port := start; port < end; port++ {
-			go s.PingServerPort(port, c)
+			go (*s).PingServerPort(port, c)
 		}
 	}
 

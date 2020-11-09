@@ -87,7 +87,6 @@ func (s *Scanner) BatchCalls(start int, end int, ops *SafeSlice) {
 			scannedInBatch++
 			go func(l string, openPorts *SafeSlice) {
 				if l != "." {
-					// fmt.Println(l)
 					wg.Add(1)
 					openPorts.append(l, &wg)
 				}
@@ -98,7 +97,7 @@ func (s *Scanner) BatchCalls(start int, end int, ops *SafeSlice) {
 				return
 			}
 		}
-		wg.Wait()
+		// wg.Wait()
 		
 	}
 	

@@ -53,18 +53,16 @@ func parsePorts(ps string) [2]int {
 
 func parseSpecifiedPorts(ps string) []int {
 	portsSliceString := strings.Split(ps, ",")
-	var specifiedPorts []int
+	specifiedPorts := make([]int, 0, len(portsSliceString))
 	if portsSliceString[0] != "" {
 		for i := range portsSliceString {
 			val, err := strconv.Atoi(portsSliceString[i])
 			if err != nil{
 				logrus.Fatal("Trouble decoding specified ports")
 			}
-			specifiedPorts = append(specifiedPorts,val )
+			specifiedPorts[i] = val
 		}
 	}
-	
-	
 	return specifiedPorts
 }
 

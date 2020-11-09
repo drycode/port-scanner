@@ -35,14 +35,14 @@ func NewProgressBar(totalPorts int) ProgressBar {
 
 // UpdatePercentage ...
 func (pb *ProgressBar) UpdatePercentage(n int) {
-	(*pb).Percentage = calculatePercentage(n, (*pb).TotalPorts)
+	pb.Percentage = calculatePercentage(n, (*pb).TotalPorts)
 	if (*pb).Percentage != (*pb).LastDisplayed {
 		(*pb).renderView()
 	}
 }
 
 func (pb *ProgressBar) renderView() {
-	(*pb).LastDisplayed = (*pb).Percentage		
+	pb.LastDisplayed = (*pb).Percentage		
 	(*pb).Output[102] = "  " + strconv.Itoa((*pb).LastDisplayed) + "%"
 	(*pb).Output[(*pb).Percentage] = "#"	
 	printable:=(*pb).Output[:]

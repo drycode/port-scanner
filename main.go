@@ -15,18 +15,17 @@ import (
 )
 
 // GetUlimit ...
-func getUlimit() int {
+func getUlimit() (int, error) {
 	out, err := exec.Command("ulimit", "-n").Output()
 	if err != nil {
-		panic(err)
+		return -1, err
 	}
 	ulimit := strings.TrimSpace(string(out))
 	i, err := strconv.ParseInt(ulimit, 10, 64)
-
 	if err != nil {
-		panic(err)
+		return -1, err
 	}
-	return int(i)
+	return int(i), nil
 }
 
 func init() {
@@ -40,7 +39,11 @@ func printInitialization(protocol string, host string) {
 }
 
 func getBatchSize(totalPorts int) int{
-	batchSize := getUlimit()
+	batchSize, err := getUlimit()
+	if err != nil {
+		batchSize = 2000
+		logrus.Info("Trouble locating ulimit on %s...using default batch size 2000", exec.Command("uname -rs"))
+	}
 	portRangeSize := totalPorts
 	if batchSize > portRangeSize{
 		batchSize = portRangeSize
@@ -69,11 +72,11 @@ func main() {
 	bar := pb.NewProgressBar(totalPorts)
 	scanner := ps.Scanner{Config:cliArgs, BatchSize: batchSize, Display: &bar}
 	
-	openPorts := ps.SafeSlice{}
+	openPorts := new(ps.SafeSlice)
 	
 	startTime := time.Now()
-	scanner.Scan(&openPorts)
+	scanner.Scan(openPorts)
 	elapsed := time.Since(startTime)
 
-	reportOpenPorts(totalPorts, &openPorts, elapsed)
+	reportOpenPorts(totalPorts, openPorts, elapsed)
 }

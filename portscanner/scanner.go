@@ -13,13 +13,13 @@ import (
 
 // SafeSlice ...
 type SafeSlice struct {
-	mu 			sync.Mutex
+	mu 			sync.RWMutex
 	OpenPorts 	[]string
 }
 
 func (ss *SafeSlice) length() int {
-	ss.mu.Lock()
-	defer ss.mu.Unlock()
+	ss.mu.RLock()
+	defer ss.mu.RUnlock()
 	return len(ss.OpenPorts)
 }
 

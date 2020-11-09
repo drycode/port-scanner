@@ -2,100 +2,81 @@ package main
 
 import (
 	"fmt"
-	"net"
+	"math"
 	"os/exec"
 	"strconv"
 	"strings"
 	"time"
+
+	ap "github.com/drypycode/port-scanner/argparse"
+	ps "github.com/drypycode/port-scanner/portscanner"
+	pb "github.com/drypycode/port-scanner/progressbar"
+	"github.com/sirupsen/logrus"
 )
 
-type progressBar struct {
-	portRange     [2]int
-	current       int
-	percentage    float64
-	lastDisplayed string
-}
-
-func (p *progressBar) setPercentage(i float64) {
-	perc := i / float64((*p).portRange[1]-(*p).portRange[0])
-	(*p).percentage = perc
-}
-
-// Gives go time to close up some of the open connections
-func batchCalls(r [2]int, c chan string, pb *progressBar) {
-	for i := r[0]; i < r[1]; i++ {
-		go pingServerPort(i, c)
-	}
-	j := r[0]
-	for l := range c {
-		j++
-		go func(l string, j int) {
-			if l != "." {
-				fmt.Println(l)
-			}
-		}(l, j)
-		percentageHelper(pb, float64(j-r[0]))
-		if j >= r[1] {
-			return
-		}
-	}
-
-}
-
-func pingServerPort(p int, c chan string) {
-	port := strconv.FormatInt(int64(p), 10)
-	conn, err := net.DialTimeout("tcp", "127.0.0.1:"+port, 5000*time.Millisecond)
-
-	if err == nil {
-		c <- "Port " + port + " is open"
-		conn.Close()
-		return
-	}
-	c <- "."
-	return
-}
-
-func getUlimit() int {
+// GetUlimit ...
+func getUlimit() (int, error) {
 	out, err := exec.Command("ulimit", "-n").Output()
 	if err != nil {
-		panic(err)
+		return -1, err
 	}
-	s := strings.TrimSpace(string(out))
-	i, err := strconv.ParseInt(s, 10, 64)
-
+	ulimit := strings.TrimSpace(string(out))
+	i, err := strconv.ParseInt(ulimit, 10, 64)
 	if err != nil {
-		panic(err)
+		return -1, err
 	}
-	return int(i)
+	return int(i), nil
 }
 
-func percentageHelper(pb *progressBar, n float64) {
-	pb.setPercentage(n)
-	if strconv.FormatInt(int64((*pb).percentage*100), 10) != (*pb).lastDisplayed {
-		(*pb).lastDisplayed = strconv.FormatInt(int64((*pb).percentage*100), 10)
-		fmt.Println((*pb).lastDisplayed + "%")
-	}
-
+func init() {
+	logrus.SetLevel(logrus.InfoLevel)
 }
+
+func printInitialization(protocol string, host string) {
+	fmt.Println("Starting Golang GoScan v0.1.0 ( github.com/drypycode/port-scanner/v0.1.0 ) at", time.Now().Format(time.RFC1123))
+	fmt.Println("Scanning ports on", host)
+	
+}
+
+func getBatchSize(totalPorts int) int{
+	batchSize, err := getUlimit()
+	if err != nil {
+		batchSize = 2000
+		logrus.Info("Trouble locating ulimit on %s...using default batch size 2000", exec.Command("uname -rs"))
+	}
+	portRangeSize := totalPorts
+	if batchSize > portRangeSize{
+		batchSize = portRangeSize
+	}		
+	return batchSize
+}
+
+func reportOpenPorts(totalPorts int, ss *ps.SafeSlice, timer time.Duration) {
+	fmt.Println()
+	fmt.Printf("GoScan done: %d ports scanned in %v seconds. \n", totalPorts,  math.Round(timer.Seconds()*100) / 100)
+	fmt.Println()
+	for port := range ss.OpenPorts {
+		fmt.Println(ss.OpenPorts[port])
+	}
+}
+
+
 
 func main() {
-	// dial tcp 127.0.0.1:8000: socket: too many open files
-	// This ^ error is occurring when trying to check a larger range of ports
-	portRange := [2]int{0, 9000}
-	pb := progressBar{portRange, 0, 0, ""}
-	// ulimit := getUlimit()
+	
+	cliArgs := ap.ParseArgs()
+	printInitialization(cliArgs.Protocol,cliArgs.Host)	
+	totalPorts := cliArgs.PortRange[1] - cliArgs.PortRange[0] 
+	logrus.Debug(totalPorts)
+	batchSize := getBatchSize(totalPorts)
+	bar := pb.NewProgressBar(totalPorts)
+	scanner := ps.Scanner{Config:cliArgs, BatchSize: batchSize, Display: &bar}
+	
+	openPorts := new(ps.SafeSlice)
+	
+	startTime := time.Now()
+	scanner.Scan(openPorts)
+	elapsed := time.Since(startTime)
 
-	var b int
-	// if ulimit > portRange[1] {
-	// 	b = portRange[1]
-	// } else {
-	// 	b = ulimit
-	// }
-	b = 1000
-	c := make(chan string)
-
-	for i := portRange[0]; i < portRange[1]; i += b {
-		batchCalls([2]int{i, i + b}, c, &pb)
-	}
-
+	reportOpenPorts(totalPorts, openPorts, elapsed)
 }

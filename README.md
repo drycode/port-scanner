@@ -1,4 +1,4 @@
-<h1 align=center># PortScanner</h1>
+# Golang PortScanner
 
 ![GitHub top language](https://img.shields.io/github/languages/top/drypycode/port-scanner)
 ![GitHub](https://img.shields.io/github/license/drypycode/port-scanner)

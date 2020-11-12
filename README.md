@@ -29,7 +29,7 @@ go run main.go
 
 #### Command line arguments
 
-```sh
+```
 Usage of ./main:
   -host string
         Hostname or IP address, local or remote. (default "127.0.0.1")

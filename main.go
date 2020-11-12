@@ -42,7 +42,7 @@ func getBatchSize(totalPorts int) int{
 	batchSize, err := getUlimit()
 	if err != nil {
 		batchSize = 2000
-		logrus.Info("Trouble locating ulimit on %s...using default batch size 2000", exec.Command("uname -rs"))
+		logrus.Info(fmt.Sprintf("Trouble locating ulimit on %v...using default batch size 2000", exec.Command("uname -rs")))
 	}
 	portRangeSize := totalPorts
 	if batchSize > portRangeSize{

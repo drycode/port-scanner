@@ -1,2 +1,4 @@
 todo
 *portscanner
+*.vscode
+test_all.sh

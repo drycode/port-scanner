@@ -1,4 +1,4 @@
-package utils
+package scanner
 
 import (
 	"net"
@@ -9,6 +9,7 @@ import (
 
 	ap "github.com/drypycode/portscanner/argparse"
 	. "github.com/drypycode/portscanner/progressbar"
+	. "github.com/drypycode/portscanner/utils"
 )
 
 // Scanner ...
@@ -68,7 +69,7 @@ func (s *Scanner) BatchCalls(start int, end int, ops *SafeSlice) {
 			go func(l string, openPorts *SafeSlice) {
 				if l != "." {
 					wg.Add(1)
-					openPorts.append(l, &wg)
+					openPorts.Append(l, &wg)
 				}
 
 			}(l, ops)

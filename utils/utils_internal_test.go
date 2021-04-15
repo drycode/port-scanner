@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestSetPercentage(t *testing.T) {
+func TestSafeSlice(t *testing.T) {
 	ss := SafeSlice{}
 	var wg sync.WaitGroup
 	for i := 0; i < 1000; i++ {
@@ -20,5 +20,4 @@ func TestSetPercentage(t *testing.T) {
 		fmt.Print(len(ss.OpenPorts))
 		t.Fail()
 	}
-
 }

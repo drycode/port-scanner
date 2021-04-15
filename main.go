@@ -5,34 +5,19 @@ import (
 	"math"
 	"os"
 	"os/exec"
-	"strconv"
-	"strings"
 	"time"
 
 	ap "github.com/drypycode/portscanner/argparse"
 
 	pb "github.com/drypycode/portscanner/progressbar"
 	. "github.com/drypycode/portscanner/scanner"
+	. "github.com/drypycode/portscanner/utils"
 	"github.com/sirupsen/logrus"
 )
 
 func init() {
 	logrus.SetOutput(os.Stdout)
 	logrus.SetLevel(logrus.InfoLevel)
-}
-
-// GetUlimit ...
-func getUlimit() (int, error) {
-	out, err := exec.Command("ulimit", "-n").Output()
-	if err != nil {
-		return -1, err
-	}
-	ulimit := strings.TrimSpace(string(out))
-	i, err := strconv.ParseInt(ulimit, 10, 64)
-	if err != nil {
-		return -1, err
-	}
-	return int(i), nil
 }
 
 func printInitialization(protocol string, host string) {
@@ -42,7 +27,7 @@ func printInitialization(protocol string, host string) {
 }
 
 func getBatchSize(totalPorts int) int {
-	batchSize, err := getUlimit()
+	batchSize, err := GetUlimit()
 	if err != nil {
 		batchSize = 2000
 		logrus.Info(fmt.Sprintf("Trouble locating ulimit on %v...using default batch size 2000", exec.Command("uname -rs")))

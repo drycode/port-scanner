@@ -11,7 +11,7 @@ import (
 )
 
 // ParseArgs ...
-func ParseArgs()(UnmarshalledCommandLineArgs){
+func ParseArgs() UnmarshalledCommandLineArgs {
 	cliArgs := getArgs()
 	logrus.Debug(cliArgs)
 	return cliArgs
@@ -19,12 +19,11 @@ func ParseArgs()(UnmarshalledCommandLineArgs){
 
 // UnmarshalledCommandLineArgs ...
 type UnmarshalledCommandLineArgs struct {
-	PortRange 		[2]int
-	Host 			string
-	Protocol 		string
-	Timeout			int
-	SpecifiedPorts	[]int
-
+	PortRange      [2]int
+	Host           string
+	Protocol       string
+	Timeout        int
+	SpecifiedPorts []int
 }
 
 func getArgs() UnmarshalledCommandLineArgs {
@@ -33,20 +32,20 @@ func getArgs() UnmarshalledCommandLineArgs {
 	protocolStringPtr := flag.String("protocol", "TCP", "Specify the protocol for the scanned ports.")
 	timeout := flag.Int("timeout", 5000, "Specify the timeout to wait on a port on the server.")
 	specifiedPortsPtr := flag.String("portlist", "", "A list of specific ports delimited by ','. Can be used w/ or w/o port range.")
-	
+
 	flag.Parse()
 	portRange := parsePorts(*portsStringPtr)
 	specifiedPorts := parseSpecifiedPorts(*specifiedPortsPtr)
-	
+
 	cla := UnmarshalledCommandLineArgs{portRange, *hostStringPtr, *protocolStringPtr, *timeout, specifiedPorts}
 	return cla
 }
 
 func parsePorts(ps string) [2]int {
 	portsSliceString := strings.Split(ps, "-")
-	start, _ := strconv.Atoi(portsSliceString[0]) 
+	start, _ := strconv.Atoi(portsSliceString[0])
 	end, _ := strconv.Atoi(portsSliceString[1])
-	
+
 	portsSlice := [2]int{start, end}
 	return portsSlice
 }
@@ -57,7 +56,7 @@ func parseSpecifiedPorts(ps string) []int {
 	if portsSliceString[0] != "" {
 		for i := range portsSliceString {
 			val, err := strconv.Atoi(portsSliceString[i])
-			if err != nil{
+			if err != nil {
 				logrus.Fatal("Trouble decoding specified ports")
 			}
 			specifiedPorts[i] = val

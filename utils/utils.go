@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"fmt"
 	"os/exec"
 	"reflect"
 	"strconv"
@@ -10,13 +9,12 @@ import (
 	"testing"
 )
 
-var assertionStatement = "%s -- expected: %v | actual: %v"
+var assertionStatement = "%s -- expected: %v | actual: %v \n"
 
 // Equals... fails the test if exp is not equal to act.
 func AssertEquals(tb testing.TB, name string, exp, act interface{}) {
 	if !reflect.DeepEqual(exp, act) {
-		fmt.Printf(assertionStatement, name, exp, act)
-		tb.FailNow()
+		tb.Errorf(assertionStatement, name, exp, act)
 	}
 }
 

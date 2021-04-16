@@ -2,8 +2,10 @@ package argparse
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -26,8 +28,18 @@ type UnmarshalledCommandLineArgs struct {
 	SpecifiedPorts []int
 }
 
+func (ucla *UnmarshalledCommandLineArgs) GetAllPorts() []int {
+	var allPorts []int
+	for i := ucla.PortRange[0]; i < ucla.PortRange[1]; i++ {
+		allPorts = append(allPorts, i)
+	}
+	allPorts = append(allPorts, ucla.SpecifiedPorts...)
+	sort.Ints(allPorts)
+	return allPorts
+}
+
 func getArgs() UnmarshalledCommandLineArgs {
-	portsStringPtr := flag.String("portrange", "0-3000", "A port range, delimited by '-'. 65535")
+	portsStringPtr := flag.String("portrange", "0-0", "A port range, delimited by '-'. 65535")
 	hostStringPtr := flag.String("host", "127.0.0.1", "Hostname or IP address, local or remote.")
 	protocolStringPtr := flag.String("protocol", "TCP", "Specify the protocol for the scanned ports.")
 	timeout := flag.Int("timeout", 5000, "Specify the timeout to wait on a port on the server.")
@@ -35,7 +47,7 @@ func getArgs() UnmarshalledCommandLineArgs {
 
 	flag.Parse()
 	portRange := parsePorts(*portsStringPtr)
-	specifiedPorts := parseSpecifiedPorts(*specifiedPortsPtr)
+	specifiedPorts, _ := parseSpecifiedPorts(*specifiedPortsPtr)
 
 	cla := UnmarshalledCommandLineArgs{portRange, *hostStringPtr, *protocolStringPtr, *timeout, specifiedPorts}
 	return cla
@@ -50,19 +62,24 @@ func parsePorts(ps string) [2]int {
 	return portsSlice
 }
 
-func parseSpecifiedPorts(ps string) []int {
-	portsSliceString := strings.Split(ps, ",")
-	specifiedPorts := make([]int, 0, len(portsSliceString))
-	if portsSliceString[0] != "" {
-		for i := range portsSliceString {
-			val, err := strconv.Atoi(portsSliceString[i])
-			if err != nil {
-				logrus.Fatal("Trouble decoding specified ports")
-			}
-			specifiedPorts[i] = val
+func parseSpecifiedPorts(ps string) ([]int, error) {
+	portsSlice := strings.Split(ps, ",")
+	var specifiedPorts []int
+	var err error
+	for _, port := range portsSlice {
+		if port == "" {
+			continue
 		}
+		val, err := strconv.Atoi(port)
+		if err != nil {
+			logrus.Error("Trouble decoding specified ports")
+			return make([]int, 0), err
+		}
+		specifiedPorts = append(specifiedPorts, val)
 	}
-	return specifiedPorts
+
+	fmt.Println(specifiedPorts)
+	return specifiedPorts, err
 }
 
 func validatePorts(p string) {

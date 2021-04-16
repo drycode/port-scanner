@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"fmt"
 	"strconv"
 	"sync"
 	"testing"
@@ -17,9 +16,5 @@ func TestSafeSlice(t *testing.T) {
 		go ss.Append(strconv.Itoa(i), &wg)
 	}
 	wg.Wait()
-
-	if ss.Length() != 1000 {
-		fmt.Print(len(ss.OpenPorts))
-		t.Fail()
-	}
+	AssertEquals(t, "Check all ports evaluated", ss.Length(), 1000)
 }

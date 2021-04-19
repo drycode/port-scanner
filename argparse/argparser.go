@@ -20,12 +20,11 @@ func ParseArgs() UnmarshalledCommandLineArgs {
 
 // UnmarshalledCommandLineArgs ...
 type UnmarshalledCommandLineArgs struct {
-	Hosts          []string
-	Protocol       string
-	Timeout        int
-	SpecifiedPorts []int
-	AllPorts       []int
-	TotalPorts     int
+	Hosts      []string
+	Protocol   string
+	Timeout    int
+	AllPorts   []int
+	TotalPorts int
 }
 
 func getArgs() UnmarshalledCommandLineArgs {
@@ -36,15 +35,14 @@ func getArgs() UnmarshalledCommandLineArgs {
 
 	flag.Parse()
 	hosts := parseHosts(*hostStringPtr)
-	specifiedPorts, _ := parseSpecifiedPorts(*specifiedPortsPtr)
-	totalPorts := specifiedPorts
+	allPorts, _ := parseSpecifiedPorts(*specifiedPortsPtr)
+
 	cla := UnmarshalledCommandLineArgs{
-		Hosts:          hosts,
-		Protocol:       *protocolStringPtr,
-		Timeout:        *timeout,
-		SpecifiedPorts: specifiedPorts,
-		AllPorts:       totalPorts,
-		TotalPorts:     len(totalPorts),
+		Hosts:      hosts,
+		Protocol:   *protocolStringPtr,
+		Timeout:    *timeout,
+		AllPorts:   allPorts,
+		TotalPorts: len(allPorts),
 	}
 	return cla
 }

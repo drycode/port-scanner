@@ -10,11 +10,12 @@ import (
 var nilSlice []int
 
 func TestArgParsingDefaults(t *testing.T) {
-	cla := getArgs()
-	AssertEquals(t, "Default SpecifiedPorts", nilSlice, cla.SpecifiedPorts)
-	AssertEquals(t, "Default Host", []string{"127.0.0.1"}, cla.Hosts)
-	AssertEquals(t, "Default Protocol", "TCP", cla.Protocol)
-	AssertEquals(t, "Default Timeout", 5000, cla.Timeout)
+	ucla := getArgs()
+	AssertEquals(t, "Default AllPorts", nilSlice, ucla.AllPorts)
+	AssertEquals(t, "Default Hosts", []string{"127.0.0.1"}, ucla.Hosts)
+	AssertEquals(t, "Default Protocol", "TCP", ucla.Protocol)
+	AssertEquals(t, "Default Timeout", 5000, ucla.Timeout)
+	AssertEquals(t, "Default TotalPorts", 0, ucla.TotalPorts)
 }
 
 func TestParsePorts(t *testing.T) {

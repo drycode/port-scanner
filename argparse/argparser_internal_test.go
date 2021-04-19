@@ -12,7 +12,6 @@ var nilSlice []int
 func TestArgParsingDefaults(t *testing.T) {
 	cla := getArgs()
 	AssertEquals(t, "Default SpecifiedPorts", nilSlice, cla.SpecifiedPorts)
-	AssertEquals(t, "Default Port Range", [2]int{0, 0}, cla.PortRange)
 	AssertEquals(t, "Default Host", []string{"127.0.0.1"}, cla.Hosts)
 	AssertEquals(t, "Default Protocol", "TCP", cla.Protocol)
 	AssertEquals(t, "Default Timeout", 5000, cla.Timeout)
@@ -20,7 +19,7 @@ func TestArgParsingDefaults(t *testing.T) {
 
 func TestParsePorts(t *testing.T) {
 	portRange := "134-345"
-	ports := parsePorts(portRange)
+	ports := parsePortRange(portRange)
 	AssertEquals(t, "", 2, len(ports))
 }
 
@@ -33,6 +32,9 @@ func TestParseSpecifiedPorts(t *testing.T) {
 		{input: "80,443", expected: []int{80, 443}},
 		{input: "", expected: nilSlice},
 		{input: "1,3,5,6,7", expected: []int{1, 3, 5, 6, 7}},
+		{input: "-1,-2,0", expected: []int{0}},
+		{input: "80,4423,100-105,40-45", expected: []int{40, 41, 42, 43, 44, 80, 100, 101, 102, 103, 104, 4423}},
+		{input: "80,4423,          100-105,40-45", expected: []int{40, 41, 42, 43, 44, 80, 100, 101, 102, 103, 104, 4423}},
 	}
 	for _, param := range testValidInput {
 		testname := fmt.Sprintf("%s, %d", param.input, param.expected)
@@ -42,7 +44,7 @@ func TestParseSpecifiedPorts(t *testing.T) {
 		})
 	}
 
-	testInvalidInput := []string{"-1, -2, 0", "banana", "ice,cream"}
+	testInvalidInput := []string{"banana", "ice,cream"}
 	for _, param := range testInvalidInput {
 		testname := fmt.Sprintf("parseSpecifiedPorts invalid input: %s", param)
 		t.Run(testname, func(t *testing.T) {
@@ -54,19 +56,7 @@ func TestParseSpecifiedPorts(t *testing.T) {
 	}
 }
 
-func TestGetAllPorts(t *testing.T) {
-	ports := sortAllPorts([2]int{90, 100}, []int{80, 443})
-	expected := []int{80, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 443}
-	for i := 0; i < len(ports); i++ {
-		AssertEquals(t, "Checking Ports Equality", expected[i], ports[i])
-	}
-
-}
-
 func TestParseHosts(t *testing.T) {
 	hosts := parseHosts("google.com,facebook.com,localhost,192.0.0.1")
 	AssertEquals(t, "Hosts parsed correctly", 4, len(hosts))
-}
-
-func TestValidatePorts(t *testing.T) {
 }

@@ -20,7 +20,6 @@ func ParseArgs() UnmarshalledCommandLineArgs {
 
 // UnmarshalledCommandLineArgs ...
 type UnmarshalledCommandLineArgs struct {
-	PortRange      [2]int
 	Hosts          []string
 	Protocol       string
 	Timeout        int
@@ -29,30 +28,17 @@ type UnmarshalledCommandLineArgs struct {
 	TotalPorts     int
 }
 
-func sortAllPorts(portRange [2]int, specifiedPorts []int) []int {
-	var allPorts []int
-	for i := portRange[0]; i < portRange[1]; i++ {
-		allPorts = append(allPorts, i)
-	}
-	allPorts = append(allPorts, specifiedPorts...)
-	sort.Ints(allPorts)
-	return allPorts
-}
-
 func getArgs() UnmarshalledCommandLineArgs {
-	portsStringPtr := flag.String("portrange", "0-0", "A port range, delimited by '-'. 65535")
 	hostStringPtr := flag.String("hosts", "127.0.0.1", "Hostname or IP address, local or remote.")
 	protocolStringPtr := flag.String("protocol", "TCP", "Specify the protocol for the scanned ports.")
 	timeout := flag.Int("timeout", 5000, "Specify the timeout to wait on a port on the server.")
-	specifiedPortsPtr := flag.String("portlist", "", "A list of specific ports delimited by ','. Can be used w/ or w/o port range.")
+	specifiedPortsPtr := flag.String("ports", "", "A list of specific ports delimited by ','. Can be used w/ or w/o port range.")
 
 	flag.Parse()
-	portRange := parsePorts(*portsStringPtr)
 	hosts := parseHosts(*hostStringPtr)
 	specifiedPorts, _ := parseSpecifiedPorts(*specifiedPortsPtr)
-	totalPorts := sortAllPorts(portRange, specifiedPorts)
+	totalPorts := specifiedPorts
 	cla := UnmarshalledCommandLineArgs{
-		PortRange:      portRange,
 		Hosts:          hosts,
 		Protocol:       *protocolStringPtr,
 		Timeout:        *timeout,
@@ -78,7 +64,7 @@ func parseHosts(ps string) []string {
 	return hosts[0 : i+1]
 }
 
-func parsePorts(ps string) [2]int {
+func parsePortRange(ps string) [2]int {
 	portsSliceString := strings.Split(ps, "-")
 	start, _ := strconv.Atoi(portsSliceString[0])
 	end, _ := strconv.Atoi(portsSliceString[1])
@@ -87,22 +73,51 @@ func parsePorts(ps string) [2]int {
 	return portsSlice
 }
 
+func in(char string, s string) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] == char[0] {
+			return true
+		}
+	}
+	return false
+}
+
 func parseSpecifiedPorts(ps string) ([]int, error) {
 	portsSlice := strings.Split(ps, ",")
 	var specifiedPorts []int
 	var err error
-	for _, port := range portsSlice {
-		if port == "" {
-			continue
+
+	addPortsFromRange := func(prs string) {
+		portRange := parsePortRange(prs)
+		logrus.Debug(portRange)
+		for i := portRange[0]; i < portRange[1]; i++ {
+			specifiedPorts = append(specifiedPorts, i)
 		}
-		val, err := strconv.Atoi(port)
-		if err != nil {
-			logrus.Error("Trouble decoding specified ports")
-			return make([]int, 0), err
-		}
-		specifiedPorts = append(specifiedPorts, val)
 	}
 
+	if len(portsSlice) == 0 {
+		return make([]int, 0), nil
+	}
+
+	for _, portString := range portsSlice {
+		portString = strings.TrimSpace(portString)
+		if portString == "" {
+			continue
+		} else if in("-", portString[1:]) {
+			addPortsFromRange(portString)
+		} else {
+			val, err := strconv.Atoi(portString)
+			if val < 0 {
+				continue
+			}
+			if err != nil {
+				logrus.Errorf("Trouble decoding specified ports of %s", portString)
+				return make([]int, 0), err
+			}
+			specifiedPorts = append(specifiedPorts, val)
+		}
+	}
+	sort.Ints(specifiedPorts)
 	return specifiedPorts, err
 }
 

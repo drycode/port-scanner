@@ -21,10 +21,10 @@ type Scanner struct {
 }
 
 // Scan ...
-func (s *Scanner) Scan(openPorts *SafeSlice) {
+func (s *Scanner) Scan(host string, openPorts *SafeSlice) {
 	(*s).scanned = 0
 
-	allPortsToScan := (*s).Config.GetAllPorts()
+	allPortsToScan := (*s).Config.AllPorts
 	totalPorts := len(allPortsToScan)
 	for batchStart := 0; batchStart < totalPorts; batchStart += (*s).BatchSize {
 		start := batchStart
@@ -34,17 +34,17 @@ func (s *Scanner) Scan(openPorts *SafeSlice) {
 		} else {
 			end = totalPorts
 		}
-		(*s).BatchCalls(allPortsToScan[start:end], openPorts)
+		(*s).BatchCalls(host, allPortsToScan[start:end], openPorts)
 	}
 }
 
 // PingServerPort ...
-func (s *Scanner) PingServerPort(p int, c chan string) {
+func (s *Scanner) PingServerPort(host string, p int, c chan string) {
 
 	port := strconv.FormatInt(int64(p), 10)
 	conn, err := net.DialTimeout(
 		strings.ToLower((*s).Config.Protocol),
-		(*s).Config.Host+":"+port,
+		host+":"+port,
 		time.Duration(int64((*s).Config.Timeout))*time.Millisecond,
 	)
 
@@ -58,7 +58,7 @@ func (s *Scanner) PingServerPort(p int, c chan string) {
 }
 
 // BatchCalls ...
-func (s *Scanner) BatchCalls(ports []int, ops *SafeSlice) {
+func (s *Scanner) BatchCalls(host string, ports []int, ops *SafeSlice) {
 	c := make(chan string)
 	totalPorts := len(ports)
 	scannedInBatch := 0
@@ -84,7 +84,7 @@ func (s *Scanner) BatchCalls(ports []int, ops *SafeSlice) {
 
 	var pingPorts = func(c chan string) {
 		for _, port := range ports {
-			go (*s).PingServerPort(port, c)
+			go (*s).PingServerPort(host, port, c)
 		}
 	}
 

@@ -2,7 +2,6 @@ package argparse
 
 import (
 	"flag"
-	"fmt"
 	"os"
 	"regexp"
 	"sort"
@@ -22,35 +21,61 @@ func ParseArgs() UnmarshalledCommandLineArgs {
 // UnmarshalledCommandLineArgs ...
 type UnmarshalledCommandLineArgs struct {
 	PortRange      [2]int
-	Host           string
+	Hosts          []string
 	Protocol       string
 	Timeout        int
 	SpecifiedPorts []int
+	AllPorts       []int
+	TotalPorts     int
 }
 
-func (ucla *UnmarshalledCommandLineArgs) GetAllPorts() []int {
+func sortAllPorts(portRange [2]int, specifiedPorts []int) []int {
 	var allPorts []int
-	for i := ucla.PortRange[0]; i < ucla.PortRange[1]; i++ {
+	for i := portRange[0]; i < portRange[1]; i++ {
 		allPorts = append(allPorts, i)
 	}
-	allPorts = append(allPorts, ucla.SpecifiedPorts...)
+	allPorts = append(allPorts, specifiedPorts...)
 	sort.Ints(allPorts)
 	return allPorts
 }
 
 func getArgs() UnmarshalledCommandLineArgs {
 	portsStringPtr := flag.String("portrange", "0-0", "A port range, delimited by '-'. 65535")
-	hostStringPtr := flag.String("host", "127.0.0.1", "Hostname or IP address, local or remote.")
+	hostStringPtr := flag.String("hosts", "127.0.0.1", "Hostname or IP address, local or remote.")
 	protocolStringPtr := flag.String("protocol", "TCP", "Specify the protocol for the scanned ports.")
 	timeout := flag.Int("timeout", 5000, "Specify the timeout to wait on a port on the server.")
 	specifiedPortsPtr := flag.String("portlist", "", "A list of specific ports delimited by ','. Can be used w/ or w/o port range.")
 
 	flag.Parse()
 	portRange := parsePorts(*portsStringPtr)
+	hosts := parseHosts(*hostStringPtr)
 	specifiedPorts, _ := parseSpecifiedPorts(*specifiedPortsPtr)
-
-	cla := UnmarshalledCommandLineArgs{portRange, *hostStringPtr, *protocolStringPtr, *timeout, specifiedPorts}
+	totalPorts := sortAllPorts(portRange, specifiedPorts)
+	cla := UnmarshalledCommandLineArgs{
+		PortRange:      portRange,
+		Hosts:          hosts,
+		Protocol:       *protocolStringPtr,
+		Timeout:        *timeout,
+		SpecifiedPorts: specifiedPorts,
+		AllPorts:       totalPorts,
+		TotalPorts:     len(totalPorts),
+	}
 	return cla
+}
+
+func parseHosts(ps string) []string {
+	hosts := strings.Split(ps, ",")
+	for i := 0; i < len(hosts); i++ {
+		if i < len(hosts)-1 && hosts[i] == "" {
+			hosts[i], hosts[i+1] = hosts[i+1], hosts[i]
+		}
+	}
+
+	i := len(hosts) - 1
+	for i > 0 && hosts[i] == "" {
+		i--
+	}
+	return hosts[0 : i+1]
 }
 
 func parsePorts(ps string) [2]int {
@@ -78,7 +103,6 @@ func parseSpecifiedPorts(ps string) ([]int, error) {
 		specifiedPorts = append(specifiedPorts, val)
 	}
 
-	fmt.Println(specifiedPorts)
 	return specifiedPorts, err
 }
 

@@ -13,7 +13,7 @@ func TestArgParsingDefaults(t *testing.T) {
 	cla := getArgs()
 	AssertEquals(t, "Default SpecifiedPorts", nilSlice, cla.SpecifiedPorts)
 	AssertEquals(t, "Default Port Range", [2]int{0, 0}, cla.PortRange)
-	AssertEquals(t, "Default Host", "127.0.0.1", cla.Host)
+	AssertEquals(t, "Default Host", []string{"127.0.0.1"}, cla.Hosts)
 	AssertEquals(t, "Default Protocol", "TCP", cla.Protocol)
 	AssertEquals(t, "Default Timeout", 5000, cla.Timeout)
 }
@@ -52,6 +52,20 @@ func TestParseSpecifiedPorts(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGetAllPorts(t *testing.T) {
+	ports := sortAllPorts([2]int{90, 100}, []int{80, 443})
+	expected := []int{80, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 443}
+	for i := 0; i < len(ports); i++ {
+		AssertEquals(t, "Checking Ports Equality", expected[i], ports[i])
+	}
+
+}
+
+func TestParseHosts(t *testing.T) {
+	hosts := parseHosts("google.com,facebook.com,localhost,192.0.0.1")
+	AssertEquals(t, "Hosts parsed correctly", 4, len(hosts))
 }
 
 func TestValidatePorts(t *testing.T) {

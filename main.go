@@ -20,12 +20,6 @@ func init() {
 	logrus.SetLevel(logrus.InfoLevel)
 }
 
-func printInitialization(protocol string, host string) {
-	fmt.Println("Starting Golang GoScan v0.1.0 ( github.com/drypycode/portscanner/v0.1.0 ) at", time.Now().Format(time.RFC1123))
-	fmt.Println("Scanning ports on", host)
-
-}
-
 func getBatchSize(totalPorts int) int {
 	batchSize, err := GetUlimit()
 	if err != nil {
@@ -42,27 +36,30 @@ func getBatchSize(totalPorts int) int {
 func reportOpenPorts(totalPorts int, ss *SafeSlice, timer time.Duration) {
 	fmt.Println()
 	fmt.Printf("GoScan done: %d ports scanned in %v seconds. \n", totalPorts, math.Round(timer.Seconds()*100)/100)
-	fmt.Println()
 	for port := range ss.OpenPorts {
 		fmt.Println(ss.OpenPorts[port])
 	}
+	fmt.Println()
+}
+
+func welcome() {
+	fmt.Println("Starting Golang GoScan v0.1.0 ( github.com/drypycode/portscanner/v0.1.0 ) at", time.Now().Format(time.RFC1123))
+	fmt.Println()
 }
 
 func main() {
-
+	welcome()
 	cliArgs := ap.ParseArgs()
-	printInitialization(cliArgs.Protocol, cliArgs.Host)
-	totalPorts := cliArgs.PortRange[1] - cliArgs.PortRange[0]
-	logrus.Debug(totalPorts)
-	batchSize := getBatchSize(totalPorts)
-	bar := pb.NewProgressBar(totalPorts)
-	scanner := Scanner{Config: cliArgs, BatchSize: batchSize, Display: &bar}
+	batchSize := getBatchSize(cliArgs.TotalPorts)
+	for _, host := range cliArgs.Hosts {
+		fmt.Println("Scanning ports on ", host)
+		bar := pb.NewProgressBar(cliArgs.TotalPorts)
+		scanner := Scanner{Config: cliArgs, BatchSize: batchSize, Display: &bar}
+		openPorts := new(SafeSlice)
+		startTime := time.Now()
+		scanner.Scan(host, openPorts)
+		elapsed := time.Since(startTime)
+		reportOpenPorts(cliArgs.TotalPorts, openPorts, elapsed)
+	}
 
-	openPorts := new(SafeSlice)
-
-	startTime := time.Now()
-	scanner.Scan(openPorts)
-	elapsed := time.Since(startTime)
-
-	reportOpenPorts(totalPorts, openPorts, elapsed)
 }

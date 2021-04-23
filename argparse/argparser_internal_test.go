@@ -58,6 +58,22 @@ func TestParseSpecifiedPorts(t *testing.T) {
 }
 
 func TestParseHosts(t *testing.T) {
-	hosts := parseHosts("google.com,facebook.com,localhost,192.0.0.1")
-	AssertEquals(t, "Hosts parsed correctly", 4, len(hosts))
+	type test struct {
+		input    string
+		expected []string
+	}
+	testValidInput := []test{
+		{input: "google.com,facebook.com,localhost,192.0.0.1-192.0.0.4", expected: []string{
+			"192.0.0.1",
+			"192.0.0.2",
+			"192.0.0.3",
+			"facebook.com",
+			"google.com",
+			"localhost",
+		}},
+	}
+	for _, test := range testValidInput {
+		AssertEquals(t, "Hosts parsed correctly", test.expected, parseHosts(test.input))
+	}
+
 }

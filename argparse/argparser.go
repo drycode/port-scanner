@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	. "github.com/drypycode/portscanner/utils"
 	"github.com/sirupsen/logrus"
 )
 
@@ -47,37 +48,32 @@ func getArgs() UnmarshalledCommandLineArgs {
 	return cla
 }
 
-func parseHosts(ps string) []string {
-	hosts := strings.Split(ps, ",")
-	for i := 0; i < len(hosts); i++ {
-		if i < len(hosts)-1 && hosts[i] == "" {
-			hosts[i], hosts[i+1] = hosts[i+1], hosts[i]
+func stripWhitespaceFromSliceOfStrings(sof []string) []string {
+	for i := 0; i < len(sof); i++ {
+		if i < len(sof)-1 && sof[i] == "" {
+			sof[i], sof[i+1] = sof[i+1], sof[i]
 		}
 	}
-
-	i := len(hosts) - 1
-	for i > 0 && hosts[i] == "" {
+	i := len(sof) - 1
+	for i > 0 && sof[i] == "" {
 		i--
 	}
-	return hosts[0 : i+1]
+	return sof[0 : i+1]
 }
 
-func parsePortRange(ps string) [2]int {
-	portsSliceString := strings.Split(ps, "-")
-	start, _ := strconv.Atoi(portsSliceString[0])
-	end, _ := strconv.Atoi(portsSliceString[1])
+func parseHosts(ps string) []string {
+	hosts := strings.Split(ps, ",")
 
-	portsSlice := [2]int{start, end}
-	return portsSlice
-}
-
-func in(char string, s string) bool {
-	for i := 0; i < len(s); i++ {
-		if s[i] == char[0] {
-			return true
+	for i, host := range hosts {
+		if in("-", host) {
+			ips := ParseIPRange(host)
+			hosts[i] = ""
+			hosts = append(hosts, ips...)
 		}
 	}
-	return false
+	hosts = stripWhitespaceFromSliceOfStrings(hosts)
+	sort.Strings(hosts)
+	return hosts
 }
 
 func parseSpecifiedPorts(ps string) ([]int, error) {
@@ -117,6 +113,24 @@ func parseSpecifiedPorts(ps string) ([]int, error) {
 	}
 	sort.Ints(specifiedPorts)
 	return specifiedPorts, err
+}
+
+func parsePortRange(ps string) [2]int {
+	portsSliceString := strings.Split(ps, "-")
+	start, _ := strconv.Atoi(portsSliceString[0])
+	end, _ := strconv.Atoi(portsSliceString[1])
+
+	portsSlice := [2]int{start, end}
+	return portsSlice
+}
+
+func in(char string, s string) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] == char[0] {
+			return true
+		}
+	}
+	return false
 }
 
 func validatePorts(p string) {

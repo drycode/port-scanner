@@ -49,7 +49,7 @@ func (s *Scanner) PingServerPort(host string, p int, c chan string) {
 	)
 
 	if err == nil {
-		c <- "Port " + port + " is open"
+		c <- port
 		conn.Close()
 		return
 	}

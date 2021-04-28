@@ -29,10 +29,13 @@ type UnmarshalledCommandLineArgs struct {
 }
 
 func getArgs() UnmarshalledCommandLineArgs {
-	hostStringPtr := flag.String("hosts", "127.0.0.1", "Hostname or IP address, local or remote.")
+	hostStringPtr := flag.String(
+		"hosts",
+		"127.0.0.1", "A list DNS names or IP addresses (local or remote) delimited by ','. Additionally, for IP addresses the user can provide a valid \nCIDR notation block, and the range of IPs defined in that block will be scanned. \nEx. '127.0.0.1, www.google.com, 192.0.0.0/24, 100.0.0.0-100.0.1.0' \n\nWARNING: A large range of IP addresses compounds exponentially against the list of ports to scan. \n10 hosts @ 10k ports == 100k total scans\n",
+	)
 	protocolStringPtr := flag.String("protocol", "TCP", "Specify the protocol for the scanned ports.")
 	timeout := flag.Int("timeout", 5000, "Specify the timeout to wait on a port on the server.")
-	specifiedPortsPtr := flag.String("ports", "", "A list of specific ports delimited by ','. Can be used w/ or w/o port range.")
+	specifiedPortsPtr := flag.String("ports", "", "A list of specific ports delimited by ','. Optionally: A range of ports can be provided in addition to to comma delimited \nspecific ports.\nEx. '80, 443, 100-200, 6543'")
 
 	flag.Parse()
 	hosts := parseHosts(*hostStringPtr)

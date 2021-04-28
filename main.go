@@ -33,11 +33,16 @@ func getBatchSize(totalPorts int) int {
 	return batchSize
 }
 
-func reportOpenPorts(totalPorts int, ss *SafeSlice, timer time.Duration) {
+func reportOpenPorts(totalPorts int, op map[string]*SafeSlice, timer time.Duration) {
 	fmt.Println()
 	fmt.Printf("GoScan done: %d ports scanned in %v seconds. \n", totalPorts, math.Round(timer.Seconds()*100)/100)
-	for port := range ss.OpenPorts {
-		fmt.Println(ss.OpenPorts[port])
+	fmt.Println()
+	fmt.Println("Open Ports")
+	for host, ss := range op {
+		for port := range ss.OpenPorts {
+			fmt.Printf("%s:%v\n", host, ss.OpenPorts[port])
+		}
+
 	}
 	fmt.Println()
 }
@@ -50,16 +55,19 @@ func welcome() {
 func main() {
 	welcome()
 	cliArgs := ap.ParseArgs()
-	batchSize := getBatchSize(cliArgs.TotalPorts)
-	for _, host := range cliArgs.Hosts {
-		fmt.Println("Scanning ports on ", host)
-		bar := pb.NewProgressBar(cliArgs.TotalPorts)
-		scanner := Scanner{Config: cliArgs, BatchSize: batchSize, Display: &bar}
-		openPorts := new(SafeSlice)
-		startTime := time.Now()
-		scanner.Scan(host, openPorts)
-		elapsed := time.Since(startTime)
-		reportOpenPorts(cliArgs.TotalPorts, openPorts, elapsed)
+	batchSize := getBatchSize(cliArgs.TotalPorts * len(cliArgs.Hosts))
+	hosts := cliArgs.Hosts
+	fmt.Println("Scanning ports on ", hosts)
+	bar := pb.NewProgressBar(cliArgs.TotalPorts * len(cliArgs.Hosts))
+	scanner := Scanner{Config: cliArgs, BatchSize: batchSize, Display: &bar}
+	finalReport := make(map[string]*SafeSlice)
+	startTime := time.Now()
+	for _, host := range hosts {
+		finalReport[host] = new(SafeSlice)
+		scanner.Scan(host, finalReport[host])
 	}
+
+	elapsed := time.Since(startTime)
+	reportOpenPorts(cliArgs.TotalPorts, finalReport, elapsed)
 
 }

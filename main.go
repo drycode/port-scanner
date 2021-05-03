@@ -47,27 +47,23 @@ func reportOpenPorts(totalPorts int, op map[string]*SafeSlice, timer time.Durati
 	fmt.Println()
 }
 
-func welcome() {
+func welcome(hosts []string) {
 	fmt.Println("Starting Golang GoScan v0.1.0 ( github.com/drypycode/portscanner/v0.1.0 ) at", time.Now().Format(time.RFC1123))
 	fmt.Println()
 }
 
 func main() {
-	welcome()
 	cliArgs := ap.ParseArgs()
 	batchSize := getBatchSize(cliArgs.TotalPorts * len(cliArgs.Hosts))
 	hosts := cliArgs.Hosts
-	fmt.Println("Scanning ports on ", hosts)
+	welcome(hosts)
+
 	bar := pb.NewProgressBar(cliArgs.TotalPorts * len(cliArgs.Hosts))
 	scanner := Scanner{Config: cliArgs, BatchSize: batchSize, Display: &bar}
 	finalReport := make(map[string]*SafeSlice)
+	scanner.PreScanCheck()
 	startTime := time.Now()
-	for _, host := range hosts {
-		finalReport[host] = new(SafeSlice)
-		scanner.Scan(host, finalReport[host])
-	}
-
+	scanner.Scan(hosts, finalReport)
 	elapsed := time.Since(startTime)
 	reportOpenPorts(cliArgs.TotalPorts, finalReport, elapsed)
-
 }

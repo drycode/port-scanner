@@ -26,6 +26,7 @@ type UnmarshalledCommandLineArgs struct {
 	Timeout    int
 	AllPorts   []int
 	TotalPorts int
+	FilePath   string
 }
 
 func getArgs() UnmarshalledCommandLineArgs {
@@ -36,6 +37,7 @@ func getArgs() UnmarshalledCommandLineArgs {
 	protocolStringPtr := flag.String("protocol", "TCP", "Specify the protocol for the scanned ports.")
 	timeout := flag.Int("timeout", 5000, "Specify the timeout to wait on a port on the server.")
 	specifiedPortsPtr := flag.String("ports", "", "A list of specific ports delimited by ','. Optionally: A range of ports can be provided in addition to to comma delimited \nspecific ports.\nEx. '80, 443, 100-200, 6543'")
+	filePath := flag.String("output", "", "Optional output filepath to which open ports will be written. Included filepath will determine output type.\nSupported file types: .json, .txt")
 
 	flag.Parse()
 	hosts := parseHosts(*hostStringPtr)
@@ -47,6 +49,7 @@ func getArgs() UnmarshalledCommandLineArgs {
 		Timeout:    *timeout,
 		AllPorts:   allPorts,
 		TotalPorts: len(allPorts),
+		FilePath:   *filePath,
 	}
 	return cla
 }
@@ -74,11 +77,9 @@ func parseHosts(ps string) []string {
 			for _, ip := range ips {
 				hosts[ip] = exists
 			}
-			// hosts = append(hosts, ips...)
+
 		} else if in("/", host) {
 			firstLastIP := DeriveFromCIDR(host)
-			// hosts[i] = ""
-			// hosts = append(hosts, IPRangeFromFirstLast(firstLastIP[0], firstLastIP[1])...)
 			for _, ip := range IPRangeFromFirstLast(firstLastIP[0], firstLastIP[1]) {
 				hosts[ip] = exists
 			}
@@ -86,7 +87,6 @@ func parseHosts(ps string) []string {
 			hosts[host] = exists
 		}
 	}
-	// hosts = stripWhitespaceFromSliceOfStrings(hosts)
 	finalSlice := []string{}
 	for v := range hosts {
 		finalSlice = append(finalSlice, v)

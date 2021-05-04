@@ -1,10 +1,13 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 	"time"
 
 	ap "github.com/drypycode/portscanner/argparse"
@@ -20,6 +23,11 @@ func init() {
 	logrus.SetLevel(logrus.InfoLevel)
 }
 
+func check(e error) {
+	if e != nil {
+		panic(e)
+	}
+}
 func getBatchSize(totalPorts int) int {
 	batchSize, err := GetUlimit()
 	if err != nil {
@@ -33,16 +41,53 @@ func getBatchSize(totalPorts int) int {
 	return batchSize
 }
 
-func reportOpenPorts(totalPorts int, op map[string]*SafeSlice, timer time.Duration) {
+type output struct {
+	Host  string
+	Ports []string
+}
+
+func printJSON(ops map[string]*SafeSlice, f os.File) {
+	var final []output
+	for host, ss := range ops {
+		hostPorts := &output{
+			Host:  host,
+			Ports: ss.OpenPorts,
+		}
+		final = append(final, *hostPorts)
+	}
+	marshalled, _ := json.MarshalIndent(final, "", "  ")
+	f.Write(marshalled)
+}
+
+func printResultToFile(ops map[string]*SafeSlice, path string) {
+	f, err := os.Create(path)
+	check(err)
+	if filepath.Ext(path) == ".json" {
+		printJSON(ops, *f)
+	} else {
+		for host, ss := range ops {
+			for port := range ss.OpenPorts {
+				f.WriteString(fmt.Sprintf("%s:%v\n", host, ss.OpenPorts[port]))
+			}
+		}
+	}
+
+}
+
+func reportOpenPorts(totalPorts int, op map[string]*SafeSlice, timer time.Duration, cliArgs ap.UnmarshalledCommandLineArgs) {
 	fmt.Println()
 	fmt.Printf("GoScan done: %d ports scanned in %v seconds. \n", totalPorts, math.Round(timer.Seconds()*100)/100)
 	fmt.Println()
-	fmt.Println("Open Ports")
-	for host, ss := range op {
-		for port := range ss.OpenPorts {
-			fmt.Printf("%s:%v\n", host, ss.OpenPorts[port])
-		}
 
+	if strings.Compare(cliArgs.FilePath, "") != 0 {
+		printResultToFile(op, cliArgs.FilePath)
+	} else {
+		fmt.Println("Open Ports")
+		for host, ss := range op {
+			for port := range ss.OpenPorts {
+				fmt.Printf("%s:%v\n", host, ss.OpenPorts[port])
+			}
+		}
 	}
 	fmt.Println()
 }
@@ -65,5 +110,5 @@ func main() {
 	startTime := time.Now()
 	scanner.Scan(hosts, finalReport)
 	elapsed := time.Since(startTime)
-	reportOpenPorts(cliArgs.TotalPorts, finalReport, elapsed)
+	reportOpenPorts(cliArgs.TotalPorts, finalReport, elapsed, cliArgs)
 }

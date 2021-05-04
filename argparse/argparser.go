@@ -71,7 +71,6 @@ func parseHosts(ps string) []string {
 	for _, host := range hostSlice {
 		if in("-", host) {
 			ips := ParseIPRange(host)
-			hosts[host] = exists
 			for _, ip := range ips {
 				hosts[ip] = exists
 			}

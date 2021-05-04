@@ -65,18 +65,35 @@ func stripWhitespaceFromSliceOfStrings(sof []string) []string {
 }
 
 func parseHosts(ps string) []string {
-	hosts := strings.Split(ps, ",")
-
-	for i, host := range hosts {
+	hostSlice := strings.Split(ps, ",")
+	hosts := make(map[string]struct{})
+	exists := struct{}{}
+	for _, host := range hostSlice {
 		if in("-", host) {
 			ips := ParseIPRange(host)
-			hosts[i] = ""
-			hosts = append(hosts, ips...)
+			hosts[host] = exists
+			for _, ip := range ips {
+				hosts[ip] = exists
+			}
+			// hosts = append(hosts, ips...)
+		} else if in("/", host) {
+			firstLastIP := DeriveFromCIDR(host)
+			// hosts[i] = ""
+			// hosts = append(hosts, IPRangeFromFirstLast(firstLastIP[0], firstLastIP[1])...)
+			for _, ip := range IPRangeFromFirstLast(firstLastIP[0], firstLastIP[1]) {
+				hosts[ip] = exists
+			}
+		} else {
+			hosts[host] = exists
 		}
 	}
-	hosts = stripWhitespaceFromSliceOfStrings(hosts)
-	sort.Strings(hosts)
-	return hosts
+	// hosts = stripWhitespaceFromSliceOfStrings(hosts)
+	finalSlice := []string{}
+	for v := range hosts {
+		finalSlice = append(finalSlice, v)
+	}
+	sort.Strings(finalSlice)
+	return finalSlice
 }
 
 func parseSpecifiedPorts(ps string) ([]int, error) {

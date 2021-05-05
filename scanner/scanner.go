@@ -18,7 +18,7 @@ import (
 type Scanner struct {
 	Config    ap.UnmarshalledCommandLineArgs
 	BatchSize int
-	Display   *ProgressBar
+	Display   Progress
 	scanned   int
 }
 
@@ -57,11 +57,11 @@ func (s *Scanner) PreScanCheck() {
 }
 
 // Scan ...
-func (s *Scanner) Scan(hosts []string, openPorts map[string]*SafeSlice) {
+func (s *Scanner) Scan(openPorts map[string]*SafeSlice) {
 	(*s).scanned = 0
-	fmt.Println("Scanning ports on ", hosts)
+	fmt.Println("Scanning ports on ", (*s).Config.Hosts)
 	allPortsToScan := (*s).Config.AllPorts
-	hostPortPairs := buildHostPortPairs(hosts, allPortsToScan)
+	hostPortPairs := buildHostPortPairs((*s).Config.Hosts, allPortsToScan)
 	totalPorts := len(hostPortPairs)
 
 	for batchStart := 0; batchStart < totalPorts; batchStart += (*s).BatchSize {

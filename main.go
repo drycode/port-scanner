@@ -74,9 +74,9 @@ func printResultToFile(ops map[string]*SafeSlice, path string) {
 
 }
 
-func reportOpenPorts(totalPorts int, op map[string]*SafeSlice, timer time.Duration, cliArgs ap.UnmarshalledCommandLineArgs) {
+func reportOpenPorts(op map[string]*SafeSlice, timer time.Duration, cliArgs ap.UnmarshalledCommandLineArgs) {
 	fmt.Println()
-	fmt.Printf("GoScan done: %d ports scanned in %v seconds. \n", totalPorts, math.Round(timer.Seconds()*100)/100)
+	fmt.Printf("GoScan done: %d ports scanned in %v seconds. \n", cliArgs.TotalPorts, math.Round(timer.Seconds()*100)/100)
 	fmt.Println()
 
 	if strings.Compare(cliArgs.FilePath, "") != 0 {
@@ -99,16 +99,16 @@ func welcome(hosts []string) {
 
 func main() {
 	cliArgs := ap.ParseArgs()
-	batchSize := getBatchSize(cliArgs.TotalPorts * len(cliArgs.Hosts))
+	batchSize := getBatchSize(cliArgs.TotalPorts)
 	hosts := cliArgs.Hosts
 	welcome(hosts)
 
-	bar := pb.NewProgressBar(cliArgs.TotalPorts * len(cliArgs.Hosts))
+	bar := pb.NewProgressBar(cliArgs.TotalPorts)
 	scanner := Scanner{Config: cliArgs, BatchSize: batchSize, Display: &bar}
 	finalReport := make(map[string]*SafeSlice)
 	scanner.PreScanCheck()
 	startTime := time.Now()
-	scanner.Scan(hosts, finalReport)
+	scanner.Scan(finalReport)
 	elapsed := time.Since(startTime)
-	reportOpenPorts(cliArgs.TotalPorts, finalReport, elapsed, cliArgs)
+	reportOpenPorts(finalReport, elapsed, cliArgs)
 }

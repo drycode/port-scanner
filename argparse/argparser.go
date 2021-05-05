@@ -48,7 +48,7 @@ func getArgs() UnmarshalledCommandLineArgs {
 		Protocol:   *protocolStringPtr,
 		Timeout:    *timeout,
 		AllPorts:   allPorts,
-		TotalPorts: len(allPorts),
+		TotalPorts: len(allPorts) * len(hosts),
 		FilePath:   *filePath,
 	}
 	return cla

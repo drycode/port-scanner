@@ -121,3 +121,12 @@ func DeriveFromCIDR(cidr string) [2]net.IP {
 	fmt.Println(first, last)
 	return [2]net.IP{first, last}
 }
+
+func In(char string, s string) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] == char[0] {
+			return true
+		}
+	}
+	return false
+}

@@ -27,6 +27,10 @@ type UnmarshalledCommandLineArgs struct {
 	AllPorts   []int
 	TotalPorts int
 	FilePath   string
+	Jump       bool
+	RemoteHost string
+	RemoteUser string
+	PrivateKey string
 }
 
 func getArgs() UnmarshalledCommandLineArgs {
@@ -38,6 +42,13 @@ func getArgs() UnmarshalledCommandLineArgs {
 	timeout := flag.Int("timeout", 5000, "Specify the timeout to wait on a port on the server.")
 	specifiedPortsPtr := flag.String("ports", "", "A list of specific ports delimited by ','. Optionally: A range of ports can be provided in addition to to comma delimited \nspecific ports.\nEx. '80, 443, 100-200, 6543'")
 	filePath := flag.String("output", "", "Optional output filepath to which open ports will be written. Included filepath will determine output type.\nSupported file types: .json, .txt")
+	jump := flag.Bool("jump", false, "")
+	remoteHost := flag.String("remote-host", "", "Remote host IP address or DNS to use as a jump box. Useful for assessing the open ports secured behind a firewall.")
+	remoteUser := flag.String("remote-user", "", "Login username for the remote machine.")
+	var sshKeyPath string
+	var sshKeyPathUsage string = "Path to the ssh key "
+	flag.StringVar(&sshKeyPath, "ssh-key", sshKeyPath, sshKeyPathUsage)
+	flag.StringVar(&sshKeyPath, "-i", sshKeyPath, sshKeyPathUsage+" (shorthand)")
 
 	flag.Parse()
 	hosts := parseHosts(*hostStringPtr)
@@ -50,6 +61,10 @@ func getArgs() UnmarshalledCommandLineArgs {
 		AllPorts:   allPorts,
 		TotalPorts: len(allPorts) * len(hosts),
 		FilePath:   *filePath,
+		Jump:       *jump,
+		RemoteHost: *remoteHost,
+		RemoteUser: *remoteUser,
+		PrivateKey: sshKeyPath,
 	}
 	return cla
 }
@@ -72,13 +87,13 @@ func parseHosts(ps string) []string {
 	hosts := make(map[string]struct{})
 	exists := struct{}{}
 	for _, host := range hostSlice {
-		if in("-", host) {
+		if In("-", host) {
 			ips := ParseIPRange(host)
 			for _, ip := range ips {
 				hosts[ip] = exists
 			}
 
-		} else if in("/", host) {
+		} else if In("/", host) {
 			firstLastIP := DeriveFromCIDR(host)
 			for _, ip := range IPRangeFromFirstLast(firstLastIP[0], firstLastIP[1]) {
 				hosts[ip] = exists
@@ -116,7 +131,7 @@ func parseSpecifiedPorts(ps string) ([]int, error) {
 		portString = strings.TrimSpace(portString)
 		if portString == "" {
 			continue
-		} else if in("-", portString[1:]) {
+		} else if In("-", portString[1:]) {
 			addPortsFromRange(portString)
 		} else {
 			val, err := strconv.Atoi(portString)
@@ -141,15 +156,6 @@ func parsePortRange(ps string) [2]int {
 
 	portsSlice := [2]int{start, end}
 	return portsSlice
-}
-
-func in(char string, s string) bool {
-	for i := 0; i < len(s); i++ {
-		if s[i] == char[0] {
-			return true
-		}
-	}
-	return false
 }
 
 func validatePorts(p string) {

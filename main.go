@@ -11,9 +11,11 @@ import (
 	"time"
 
 	ap "github.com/drypycode/portscanner/argparse"
+	"github.com/drypycode/portscanner/ssh"
 
 	pb "github.com/drypycode/portscanner/progressbar"
 	. "github.com/drypycode/portscanner/scanner"
+	. "github.com/drypycode/portscanner/ssh"
 	. "github.com/drypycode/portscanner/utils"
 	"github.com/sirupsen/logrus"
 )
@@ -101,14 +103,19 @@ func main() {
 	cliArgs := ap.ParseArgs()
 	batchSize := getBatchSize(cliArgs.TotalPorts)
 	hosts := cliArgs.Hosts
-	welcome(hosts)
+	if cliArgs.Jump {
+		// Tunnel and runCommand on remote server
+		Jump(ssh.SSHConfig{Key: cliArgs.PrivateKey, User: cliArgs.RemoteUser, RemoteHost: cliArgs.RemoteHost, Port: "22"})
+	} else {
+		welcome(hosts)
+		bar := pb.NewProgressBar(cliArgs.TotalPorts)
+		scanner := Scanner{Config: cliArgs, BatchSize: batchSize, Display: &bar}
+		finalReport := make(map[string]*SafeSlice)
+		scanner.PreScanCheck()
+		startTime := time.Now()
+		scanner.Scan(finalReport)
+		elapsed := time.Since(startTime)
+		reportOpenPorts(finalReport, elapsed, cliArgs)
+	}
 
-	bar := pb.NewProgressBar(cliArgs.TotalPorts)
-	scanner := Scanner{Config: cliArgs, BatchSize: batchSize, Display: &bar}
-	finalReport := make(map[string]*SafeSlice)
-	scanner.PreScanCheck()
-	startTime := time.Now()
-	scanner.Scan(finalReport)
-	elapsed := time.Since(startTime)
-	reportOpenPorts(finalReport, elapsed, cliArgs)
 }

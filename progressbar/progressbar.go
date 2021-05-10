@@ -6,32 +6,35 @@ import (
 	"strings"
 )
 
+type Progress interface {
+	UpdatePercentage(int)
+}
+
 // ProgressBar ...
 type ProgressBar struct {
-	TotalPorts    	int
-	Percentage    	int
-	LastDisplayed 	int
-	Output			[104]string
+	TotalPorts    int
+	Percentage    int
+	LastDisplayed int
+	Output        [104]string
 }
 
 // NewProgressBar ...
 func NewProgressBar(totalPorts int) ProgressBar {
-	i:=1
+	i := 1
 	temp := [104]string{0: "[", 101: "]"}
 	for i < 101 {
 		temp[i] = "-"
-		i ++
+		i++
 	}
 	pb := ProgressBar{
-		TotalPorts: totalPorts, 
-		Percentage: 0, 
+		TotalPorts:    totalPorts,
+		Percentage:    0,
 		LastDisplayed: 0,
-		Output: temp,
+		Output:        temp,
 	}
-	
+
 	return pb
 }
-
 
 // UpdatePercentage ...
 func (pb *ProgressBar) UpdatePercentage(n int) {
@@ -42,13 +45,13 @@ func (pb *ProgressBar) UpdatePercentage(n int) {
 }
 
 func (pb *ProgressBar) renderView() {
-	pb.LastDisplayed = (*pb).Percentage		
+	pb.LastDisplayed = (*pb).Percentage
 	(*pb).Output[102] = "  " + strconv.Itoa((*pb).LastDisplayed) + "%"
-	(*pb).Output[(*pb).Percentage] = "#"	
-	printable:=(*pb).Output[:]
+	(*pb).Output[(*pb).Percentage] = "#"
+	printable := (*pb).Output[:]
 	fmt.Print("\r" + strings.Join(printable, ""))
 }
 
-func calculatePercentage(scanned int, total int) int {	
+func calculatePercentage(scanned int, total int) int {
 	return int(float64(scanned) / float64(total) * 100)
 }

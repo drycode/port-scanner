@@ -1,31 +1,79 @@
 package argparse
 
 import (
+	"fmt"
 	"testing"
 
 	. "github.com/drypycode/portscanner/utils"
 )
 
+var nilSlice []int
+
 func TestArgParsingDefaults(t *testing.T) {
-	cla := getArgs()
-	if cla.SpecifiedPorts == nil {
-		t.Errorf("Expected non-null value")
-	}
-	AssertEquals(t, "Default Port Range", cla.PortRange, [2]int{0, 3000})
-	AssertEquals(t, "Default Host", cla.Host, "127.0.0.1")
-	AssertEquals(t, "Default Protocol", cla.Protocol, "TCP")
-	AssertEquals(t, "Default Timeout", cla.Timeout, 5000)
+	ucla := getArgs()
+	AssertEquals(t, "Default AllPorts", nilSlice, ucla.AllPorts)
+	AssertEquals(t, "Default Hosts", []string{"127.0.0.1"}, ucla.Hosts)
+	AssertEquals(t, "Default Protocol", "TCP", ucla.Protocol)
+	AssertEquals(t, "Default Timeout", 5000, ucla.Timeout)
+	AssertEquals(t, "Default TotalPorts", 0, ucla.TotalPorts)
 }
 
 func TestParsePorts(t *testing.T) {
 	portRange := "134-345"
-	ports := parsePorts(portRange)
+	ports := parsePortRange(portRange)
 	AssertEquals(t, "", 2, len(ports))
 }
 
 func TestParseSpecifiedPorts(t *testing.T) {
+	type test struct {
+		input    string
+		expected []int
+	}
+	testValidInput := []test{
+		{input: "80,443", expected: []int{80, 443}},
+		{input: "", expected: nilSlice},
+		{input: "1,3,5,6,7", expected: []int{1, 3, 5, 6, 7}},
+		{input: "-1,-2,0", expected: []int{0}},
+		{input: "80,4423,100-105,40-45", expected: []int{40, 41, 42, 43, 44, 80, 100, 101, 102, 103, 104, 4423}},
+		{input: "80,4423,          100-105,40-45", expected: []int{40, 41, 42, 43, 44, 80, 100, 101, 102, 103, 104, 4423}},
+	}
+	for _, param := range testValidInput {
+		testname := fmt.Sprintf("%s, %d", param.input, param.expected)
+		t.Run(testname, func(t *testing.T) {
+			value, _ := parseSpecifiedPorts(param.input)
+			AssertEquals(t, "Specified Ports", param.expected, value)
+		})
+	}
 
+	testInvalidInput := []string{"banana", "ice,cream"}
+	for _, param := range testInvalidInput {
+		testname := fmt.Sprintf("parseSpecifiedPorts invalid input: %s", param)
+		t.Run(testname, func(t *testing.T) {
+			_, err := parseSpecifiedPorts(param)
+			if err == nil {
+				t.Error(testname + " did not return an error")
+			}
+		})
+	}
 }
 
-func TestValidatePorts(t *testing.T) {
+func TestParseHosts(t *testing.T) {
+	type test struct {
+		input    string
+		expected []string
+	}
+	testValidInput := []test{
+		{input: "google.com,facebook.com,localhost,192.0.0.1-192.0.0.4", expected: []string{
+			"192.0.0.1",
+			"192.0.0.2",
+			"192.0.0.3",
+			"facebook.com",
+			"google.com",
+			"localhost",
+		}},
+	}
+	for _, test := range testValidInput {
+		AssertEquals(t, "Hosts parsed correctly", test.expected, parseHosts(test.input))
+	}
+
 }

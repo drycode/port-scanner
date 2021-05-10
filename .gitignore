@@ -2,3 +2,5 @@ todo
 *portscanner
 *.vscode
 test_all.sh
+*.env
+*.out

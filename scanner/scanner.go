@@ -1,7 +1,9 @@
 package scanner
 
 import (
+	"fmt"
 	"net"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -16,73 +18,115 @@ import (
 type Scanner struct {
 	Config    ap.UnmarshalledCommandLineArgs
 	BatchSize int
-	Display   *ProgressBar
+	Display   Progress
 	scanned   int
 }
 
+type hostPortPair struct {
+	host string
+	port int
+}
+
+func buildHostPortPairs(hosts []string, allPortsToScan []int) []hostPortPair {
+	var pairs []hostPortPair
+	for _, host := range hosts {
+		for _, port := range allPortsToScan {
+			pairs = append(pairs, hostPortPair{host, port})
+		}
+	}
+	return pairs
+}
+
+func (s *Scanner) PreScanCheck() {
+	total := int64(len((*s).Config.Hosts)) * int64((*s).Config.TotalPorts)
+	if total > 300_000 {
+		fmt.Printf("It looks like you have selected a considerable amount of hosts / ports to scan (total: %v). Would you like to continue?\n", total)
+
+		// var then variable name then variable type
+		var input string
+
+		// Taking input from user
+		fmt.Scanln(&input)
+		for _, val := range []string{"yes", "y", "Y"} {
+			if strings.Compare(input, val) == 0 {
+				return
+			}
+		}
+		os.Exit(0)
+	}
+}
+
 // Scan ...
-func (s *Scanner) Scan(openPorts *SafeSlice) {
+func (s *Scanner) Scan(openPorts map[string]*SafeSlice) {
 	(*s).scanned = 0
-	for batchStart := (*s).Config.PortRange[0]; batchStart < (*s).Config.PortRange[1]; batchStart += (*s).BatchSize {
+	fmt.Println("Scanning ports on ", (*s).Config.Hosts)
+	allPortsToScan := (*s).Config.AllPorts
+	hostPortPairs := buildHostPortPairs((*s).Config.Hosts, allPortsToScan)
+	totalPorts := len(hostPortPairs)
+
+	for batchStart := 0; batchStart < totalPorts; batchStart += (*s).BatchSize {
 		start := batchStart
 		var end int
-		if (batchStart + (*s).BatchSize) < (*s).Config.PortRange[1] {
+		if (batchStart + (*s).BatchSize) < totalPorts {
 			end = (batchStart + (*s).BatchSize)
 		} else {
-			end = (*s).Config.PortRange[1]
+			end = totalPorts
 		}
-		(*s).BatchCalls(start, end, openPorts)
+		(*s).BatchCalls(hostPortPairs[start:end], openPorts)
 	}
 }
 
 // PingServerPort ...
-func (s *Scanner) PingServerPort(p int, c chan string) {
+func (s *Scanner) PingServerPort(host string, p int, c chan hostPortPair) {
 
 	port := strconv.FormatInt(int64(p), 10)
 	conn, err := net.DialTimeout(
 		strings.ToLower((*s).Config.Protocol),
-		(*s).Config.Host+":"+port,
+		host+":"+port,
 		time.Duration(int64((*s).Config.Timeout))*time.Millisecond,
 	)
 
 	if err == nil {
-		c <- "Port " + port + " is open"
+		port, _ := strconv.Atoi(port)
+		c <- hostPortPair{host: host, port: port}
 		conn.Close()
 		return
 	}
-	c <- "."
+	c <- hostPortPair{host: ".", port: 0}
 	return
 }
 
 // BatchCalls ...
-func (s *Scanner) BatchCalls(start int, end int, ops *SafeSlice) {
-	c := make(chan string)
-	// var start = batchStart
-	// var end = (*s).Config.PortRange[1]
+func (s *Scanner) BatchCalls(hpps []hostPortPair, ops map[string]*SafeSlice) {
+	c := make(chan hostPortPair)
+	totalPorts := len(hpps)
 	scannedInBatch := 0
-	var logFromChannel = func(c chan string) {
+	var logFromChannel = func(c chan hostPortPair) {
 		wg := sync.WaitGroup{}
-		for l := range c {
+		for hpp := range c {
 			(*s).scanned++
 			(*s).Display.UpdatePercentage((*s).scanned)
 			scannedInBatch++
-			go func(l string, openPorts *SafeSlice) {
-				if l != "." {
+			go func(hpp hostPortPair, openPorts map[string]*SafeSlice) {
+				if hpp.host != "." {
 					wg.Add(1)
-					openPorts.Append(l, &wg)
+					if _, ok := openPorts[hpp.host]; !ok {
+						openPorts[hpp.host] = new(SafeSlice)
+					}
+					openPorts[hpp.host].Append(strconv.Itoa(hpp.port), &wg)
 				}
 
-			}(l, ops)
+			}(hpp, ops)
 
-			if scannedInBatch >= end-start {
+			if scannedInBatch >= totalPorts {
 				return
 			}
 		}
 	}
 
-	var pingPorts = func(c chan string) {
-		for port := start; port < end; port++ {
-			go (*s).PingServerPort(port, c)
+	var pingPorts = func(c chan hostPortPair) {
+		for _, hpp := range hpps {
+			go (*s).PingServerPort(hpp.host, hpp.port, c)
 		}
 	}
 

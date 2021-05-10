@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"fmt"
 	"strconv"
 	"sync"
 	"testing"
@@ -17,9 +16,34 @@ func TestSafeSlice(t *testing.T) {
 		go ss.Append(strconv.Itoa(i), &wg)
 	}
 	wg.Wait()
+	AssertEquals(t, "Check all ports evaluated", ss.Length(), 1000)
+}
 
-	if ss.Length() != 1000 {
-		fmt.Print(len(ss.OpenPorts))
-		t.Fail()
+func TestParseIPRange(t *testing.T) {
+	type test struct {
+		input    string
+		expected []string
 	}
+	testValidInput := []test{
+		{input: "123.45.1.34-123.45.1.38", expected: []string{
+			"123.45.1.34",
+			"123.45.1.35",
+			"123.45.1.36",
+			"123.45.1.37",
+		}},
+		{input: "123.45.1.255-123.45.2.2", expected: []string{
+			"123.45.1.255",
+			"123.45.2.1",
+		}},
+		{input: "222.255.255.254-223.1.1.2", expected: []string{
+			"222.255.255.254",
+			"222.255.255.255",
+			"223.1.1.1",
+		}},
+	}
+	for _, test := range testValidInput {
+		ipRange := ParseIPRange(test.input)
+		AssertEquals(t, "Check parse IP range", test.expected, ipRange)
+	}
+
 }

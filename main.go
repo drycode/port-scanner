@@ -1,16 +1,21 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 	"time"
 
 	ap "github.com/drypycode/portscanner/argparse"
+	"github.com/drypycode/portscanner/ssh"
 
 	pb "github.com/drypycode/portscanner/progressbar"
 	. "github.com/drypycode/portscanner/scanner"
+	. "github.com/drypycode/portscanner/ssh"
 	. "github.com/drypycode/portscanner/utils"
 	"github.com/sirupsen/logrus"
 )
@@ -20,12 +25,11 @@ func init() {
 	logrus.SetLevel(logrus.InfoLevel)
 }
 
-func printInitialization(protocol string, host string) {
-	fmt.Println("Starting Golang GoScan v0.1.0 ( github.com/drypycode/portscanner/v0.1.0 ) at", time.Now().Format(time.RFC1123))
-	fmt.Println("Scanning ports on", host)
-
+func check(e error) {
+	if e != nil {
+		panic(e)
+	}
 }
-
 func getBatchSize(totalPorts int) int {
 	batchSize, err := GetUlimit()
 	if err != nil {
@@ -39,30 +43,79 @@ func getBatchSize(totalPorts int) int {
 	return batchSize
 }
 
-func reportOpenPorts(totalPorts int, ss *SafeSlice, timer time.Duration) {
-	fmt.Println()
-	fmt.Printf("GoScan done: %d ports scanned in %v seconds. \n", totalPorts, math.Round(timer.Seconds()*100)/100)
-	fmt.Println()
-	for port := range ss.OpenPorts {
-		fmt.Println(ss.OpenPorts[port])
+type output struct {
+	Host  string
+	Ports []string
+}
+
+func printJSON(ops map[string]*SafeSlice, f os.File) {
+	var final []output
+	for host, ss := range ops {
+		hostPorts := &output{
+			Host:  host,
+			Ports: ss.OpenPorts,
+		}
+		final = append(final, *hostPorts)
 	}
+	marshalled, _ := json.MarshalIndent(final, "", "  ")
+	f.Write(marshalled)
+}
+
+func printResultToFile(ops map[string]*SafeSlice, path string) {
+	f, err := os.Create(path)
+	check(err)
+	if filepath.Ext(path) == ".json" {
+		printJSON(ops, *f)
+	} else {
+		for host, ss := range ops {
+			for port := range ss.OpenPorts {
+				f.WriteString(fmt.Sprintf("%s:%v\n", host, ss.OpenPorts[port]))
+			}
+		}
+	}
+
+}
+
+func reportOpenPorts(op map[string]*SafeSlice, timer time.Duration, cliArgs ap.UnmarshalledCommandLineArgs) {
+	fmt.Println()
+	fmt.Printf("GoScan done: %d ports scanned in %v seconds. \n", cliArgs.TotalPorts, math.Round(timer.Seconds()*100)/100)
+	fmt.Println()
+
+	if strings.Compare(cliArgs.FilePath, "") != 0 {
+		printResultToFile(op, cliArgs.FilePath)
+	} else {
+		fmt.Println("Open Ports")
+		for host, ss := range op {
+			for port := range ss.OpenPorts {
+				fmt.Printf("%s:%v\n", host, ss.OpenPorts[port])
+			}
+		}
+	}
+	fmt.Println()
+}
+
+func welcome(hosts []string) {
+	fmt.Println("Starting Golang GoScan v0.1.0 ( github.com/drypycode/portscanner/v0.1.0 ) at", time.Now().Format(time.RFC1123))
+	fmt.Println()
 }
 
 func main() {
-
 	cliArgs := ap.ParseArgs()
-	printInitialization(cliArgs.Protocol, cliArgs.Host)
-	totalPorts := cliArgs.PortRange[1] - cliArgs.PortRange[0]
-	logrus.Debug(totalPorts)
-	batchSize := getBatchSize(totalPorts)
-	bar := pb.NewProgressBar(totalPorts)
-	scanner := Scanner{Config: cliArgs, BatchSize: batchSize, Display: &bar}
+	batchSize := getBatchSize(cliArgs.TotalPorts)
+	hosts := cliArgs.Hosts
+	if cliArgs.Jump {
+		// Tunnel and runCommand on remote server
+		Jump(ssh.SSHConfig{Key: cliArgs.PrivateKey, User: cliArgs.RemoteUser, RemoteHost: cliArgs.RemoteHost, Port: "22"})
+	} else {
+		welcome(hosts)
+		bar := pb.NewProgressBar(cliArgs.TotalPorts)
+		scanner := Scanner{Config: cliArgs, BatchSize: batchSize, Display: &bar}
+		finalReport := make(map[string]*SafeSlice)
+		scanner.PreScanCheck()
+		startTime := time.Now()
+		scanner.Scan(finalReport)
+		elapsed := time.Since(startTime)
+		reportOpenPorts(finalReport, elapsed, cliArgs)
+	}
 
-	openPorts := new(SafeSlice)
-
-	startTime := time.Now()
-	scanner.Scan(openPorts)
-	elapsed := time.Since(startTime)
-
-	reportOpenPorts(totalPorts, openPorts, elapsed)
 }

@@ -41,14 +41,14 @@ func getArgs() UnmarshalledCommandLineArgs {
 	protocolStringPtr := flag.String("protocol", "TCP", "Specify the protocol for the scanned ports.")
 	timeout := flag.Int("timeout", 5000, "Specify the timeout to wait on a port on the server.")
 	specifiedPortsPtr := flag.String("ports", "", "A list of specific ports delimited by ','. Optionally: A range of ports can be provided in addition to to comma delimited \nspecific ports.\nEx. '80, 443, 100-200, 6543'")
-	filePath := flag.String("output", "", "Optional output filepath to which open ports will be written. Included filepath will determine output type.\nSupported file types: .json, .txt")
-	jump := flag.Bool("jump", false, "")
-	remoteHost := flag.String("remote-host", "", "Remote host IP address or DNS to use as a jump box. Useful for assessing the open ports secured behind a firewall.")
-	remoteUser := flag.String("remote-user", "", "Login username for the remote machine.")
+	filePath := flag.String("output", "", "[Optional] Output filepath to which open ports will be written. Included filepath will determine output type.\nSupported file types: .json, .txt")
+	jump := flag.Bool("jump", false, "[Optional] Allows you to build and run the portscanner on a remote machine.\n Currently supports OS: Linux | Architecture: ARM64 ")
+	remoteHost := flag.String("remote-host", "", "[Optional] Remote host IP address or DNS to use as a jump box. Useful for assessing the open ports \nsecured behind a firewall. (requires --jump)")
+	remoteUser := flag.String("remote-user", "", "[Optional] Login username for the remote machine. (requires --jump)")
 	var sshKeyPath string
-	var sshKeyPathUsage string = "Path to the ssh key "
+	var sshKeyPathUsage string = "[Optional] Path to the ssh key used to connect to the remote container (requires --jump)"
 	flag.StringVar(&sshKeyPath, "ssh-key", sshKeyPath, sshKeyPathUsage)
-	flag.StringVar(&sshKeyPath, "-i", sshKeyPath, sshKeyPathUsage+" (shorthand)")
+	// flag.StringVar(&sshKeyPath, "-i", sshKeyPath, sshKeyPathUsage+" (shorthand)")
 
 	flag.Parse()
 	hosts := parseHosts(*hostStringPtr)

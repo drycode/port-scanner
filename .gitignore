@@ -3,3 +3,4 @@ todo
 *.vscode
 test_all.sh
 *.env
+*.out

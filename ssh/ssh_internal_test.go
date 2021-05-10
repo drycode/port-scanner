@@ -50,8 +50,8 @@ func TestRemoveRemoteFlags(t *testing.T) {
 	args := []string{
 		"go", "run", "main.go", "--ports=80,4423,100-105,40-45,1000-2000",
 		"--hosts='127.0.0.1,localhost,google.com'", "--output=/tmp/dat2.json",
-		"--protocol=TCP", "--remote-host=ec2-3-94-171-63.compute-1.amazonaws.com",
-		"--remote-user=ec2-user", "--ssh-key=/Users/danyoung/.scratch/ssh-keys/personal-dev-key.pem",
+		"--protocol=TCP", fmt.Sprintf("--remote-host=%s", os.Getenv("REMOTE_HOST")),
+		"--remote-user=ec2-user", fmt.Sprintf("--ssh-key=%s", os.Getenv("SSH_KEY_PATH")),
 		"--jump",
 	}
 	removeRemoteFlags(args)
